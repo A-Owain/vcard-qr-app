@@ -10,6 +10,54 @@ from qrcode.constants import ERROR_CORRECT_L, ERROR_CORRECT_M, ERROR_CORRECT_Q, 
 
 st.set_page_config(page_title="vCard & Multi-QR Generator", page_icon="🔳", layout="centered")
 
+st.markdown(
+    """
+    <style>
+    /* Centered title */
+    h1, h2, h3 {
+        text-align: center;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* Buttons */
+    .stButton>button {
+        background: linear-gradient(90deg, #4CAF50, #45a049);
+        color: white;
+        border-radius: 8px;
+        font-size: 16px;
+        padding: 8px 20px;
+        transition: 0.3s;
+    }
+    .stButton>button:hover {
+        background: linear-gradient(90deg, #45a049, #4CAF50);
+        transform: scale(1.05);
+    }
+
+    /* Text inputs */
+    .stTextInput>div>div>input,
+    .stTextArea>div>textarea {
+        border: 2px solid #4CAF50;
+        border-radius: 6px;
+        padding: 6px;
+    }
+
+    /* Download buttons */
+    .stDownloadButton>button {
+        background-color: #2196F3;
+        color: white;
+        border-radius: 6px;
+        font-size: 15px;
+        padding: 6px 18px;
+    }
+    .stDownloadButton>button:hover {
+        background-color: #1976D2;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+
 # ---------- Helpers ----------
 def sanitize_filename(s: str) -> str:
     s = s.strip().lower()
