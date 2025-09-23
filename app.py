@@ -131,10 +131,10 @@ st.caption("vCard + WhatsApp + Website + Email + Phone • PNG/SVG • Permanent
 
 with st.sidebar:
     st.header("QR Settings")
-    version = st.selectbox("vCard Version", ["3.0", "4.0"], index=0)
-    ec_label = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3)
-    box_size = st.slider("Box Size (px per module)", 4, 20, 10)
-    border   = st.slider("Border (modules)", 2, 10, 4)
+#    version = st.selectbox("vCard Version", ["3.0", "4.0"], index=0)
+#    ec_label = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3)
+#    box_size = st.slider("Box Size (px per module)", 4, 20, 10)
+#    border   = st.slider("Border (modules)", 2, 10, 4)
     fmt      = st.radio("QR Output Format", ["PNG", "SVG"], index=0)
     with_logo = st.checkbox("Add center logo (PNG/JPG)", value=False)
     logo_scale = st.slider("Logo relative size", 0.10, 0.35, 0.22, 0.01, disabled=not with_logo)
