@@ -273,4 +273,4 @@ else:
                     st.download_button("⬇️ Download PNG", data=b.getvalue(), file_name=f"{stub}.png", mime="image/png")
 
 st.markdown("---")
-st.caption("Made with ❤️ by Abdurrahman Alowain. Permanent links powered by data URIs.")
+st.caption("Made with ❤️ by Abdurrahman Alowain.")
