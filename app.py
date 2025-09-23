@@ -72,9 +72,29 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
         return qr.make_image(image_factory=SvgImage)
     return qr.make_image(fill_color="black", back_color="white")
 
+def try_make_qr(content: str, ec_label: str, box_size: int, border: int, as_svg: bool):
+    try:
+        return make_qr_image(content, ec_label, box_size, border, as_svg), None
+    except ValueError as e:
+        if "Invalid version" in str(e):
+            return None, "oversize"
+        raise
+
+def overlay_logo(pil_img: Image.Image, logo_bytes: bytes, scale: float = 0.22) -> Image.Image:
+    logo = Image.open(io.BytesIO(logo_bytes)).convert("RGBA")
+    w = pil_img.size[0]
+    target_w = max(20, int(w * float(scale)))
+    aspect = logo.size[1] / logo.size[0]
+    resized = logo.resize((target_w, int(target_w * aspect)), Image.LANCZOS)
+    out = pil_img.convert("RGBA")
+    x = (out.size[0] - resized.size[0]) // 2
+    y = (out.size[1] - resized.size[1]) // 2
+    out.alpha_composite(resized, (x, y))
+    return out.convert("RGB")
+
 # ---------- UI: Global settings ----------
 st.title("🔳 vCard & Multi-QR Generator")
-st.caption("Single vCard or Batch Mode with Excel upload")
+st.caption("Single or Batch Mode • vCard + QR codes • PNG/SVG • Downloadable Excel template")
 
 with st.sidebar:
     st.header("QR Settings")
@@ -83,11 +103,59 @@ with st.sidebar:
     box_size = st.slider("Box Size", 4, 20, 10)
     border   = st.slider("Border", 2, 10, 4)
     fmt      = st.radio("QR Output Format", ["PNG", "SVG"], index=0)
+    with_logo = st.checkbox("Add center logo (PNG/JPG)", value=False)
+    logo_scale = st.slider("Logo relative size", 0.10, 0.35, 0.22, 0.01, disabled=not with_logo)
+    logo_bytes = None
+    if with_logo:
+        logo_file = st.file_uploader("Upload logo", type=["png", "jpg", "jpeg"])
+        if logo_file: logo_bytes = logo_file.read()
+
+# ---------- Single vCard mode ----------
+st.header("👤 Single Contact Mode")
+c1, c2 = st.columns(2)
+with c1:
+    first_name = st.text_input("First Name")
+    phone      = st.text_input("Phone (Work)", value="8001249000")
+    email      = st.text_input("Email")
+with c2:
+    last_name  = st.text_input("Last Name")
+    mobile     = st.text_input("Mobile")
+    website    = st.text_input("Website", value="https://alraedah.sa")
+
+organization = st.text_input("Organization", value="Alraedah Finance")
+title        = st.text_input("Title")
+notes        = st.text_area("Notes", height=100)
+
+display_name = (first_name + " " + last_name).strip() or "contact"
+base_name    = (first_name + "_" + last_name).strip("_") or "contact"
+timestamp    = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+# Build vCard
+vcard = build_vcard(version, first_name, last_name, organization, title, phone, mobile, email, website, notes)
+vcf_fname = f"{base_name}_vcard_{timestamp}.vcf"
+
+st.subheader("vCard Preview")
+st.code(vcard, language="text")
+st.download_button("💳 Download vCard (.vcf)", data=vcard_bytes(vcard), file_name=vcf_fname, mime="text/vcard")
+
+# QR
+st.subheader("QR for this vCard")
+img, _ = try_make_qr(vcard, ec_label, box_size, border, as_svg=(fmt=="SVG"))
+if img:
+    if fmt == "SVG":
+        b = io.BytesIO(); img.save(b)
+        st.markdown(b.getvalue().decode("utf-8"), unsafe_allow_html=True)
+    else:
+        pil = img.convert("RGB")
+        if with_logo and logo_bytes:
+            pil = overlay_logo(pil, logo_bytes, scale=logo_scale)
+        b = io.BytesIO(); pil.save(b, format="PNG")
+        st.image(b.getvalue())
+        st.download_button("⬇️ Download QR", data=b.getvalue(), file_name=f"{base_name}_qr.png", mime="image/png")
 
 # ---------- Batch Mode ----------
 st.header("📂 Batch Mode")
 
-# Download template
 def generate_excel_template():
     df = pd.DataFrame([
         {
@@ -128,7 +196,6 @@ st.download_button(
 uploaded = st.file_uploader("📤 Upload Filled Excel (xlsx or csv)", type=["xlsx", "csv"])
 
 if uploaded:
-    # Read file
     if uploaded.name.endswith(".csv"):
         df = pd.read_csv(uploaded)
     else:
@@ -159,11 +226,11 @@ if uploaded:
                 img_buf = io.BytesIO()
                 if fmt == "SVG":
                     img.save(img_buf)
-                    ext, mime = "svg", "image/svg+xml"
+                    ext = "svg"
                 else:
                     img = img.convert("RGB")
                     img.save(img_buf, format="PNG")
-                    ext, mime = "png", "image/png"
+                    ext = "png"
                 img_buf.seek(0)
                 zf.writestr(f"{fname}/{fname}_qr.{ext}", img_buf.getvalue())
         zip_buf.seek(0)
