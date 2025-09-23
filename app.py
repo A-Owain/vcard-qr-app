@@ -1,5 +1,5 @@
 # app.py
-import io, os, re, base64
+import io, re, base64
 from datetime import datetime
 from urllib.parse import quote_plus
 import streamlit as st
@@ -28,12 +28,11 @@ def build_vcard(
     email: str = "",
     website: str = "",
     notes: str = "",
-    photo_mode: str = "none",           # "none" | "link" | "embed"
-    photo_mediatype: str = "",          # e.g., "image/jpeg"
-    photo_url: str = "",                # when mode="link"
-    photo_b64: str = "",                # when mode="embed"
+    photo_mode: str = "none",           # "none" | "embed"
+    photo_mediatype: str = "",
+    photo_b64: str = "",
 ) -> str:
-    """Return a vCard 3.0/4.0 WITHOUT address/timezone. Supports PHOTO as link or embedded."""
+    """Return a vCard 3.0/4.0 WITHOUT address/timezone. Supports embedded PHOTO."""
     lines = []
     if version == "3.0":
         lines += ["BEGIN:VCARD", "VERSION:3.0"]
@@ -47,10 +46,8 @@ def build_vcard(
         if email.strip():         lines.append(f"EMAIL;TYPE=PREF,INTERNET:{email}")
         if website.strip():       lines.append(f"URL:{website}")
         if photo_mode == "embed" and photo_b64 and photo_mediatype:
-            img_type = photo_mediatype.split("/")[-1].upper()  # JPEG/PNG
+            img_type = photo_mediatype.split("/")[-1].upper()
             lines.append(f"PHOTO;TYPE={img_type};ENCODING=b:{photo_b64}")
-        elif photo_mode == "link" and photo_url:
-            lines.append(f"PHOTO:{photo_url}")
         if notes.strip():
             safe_notes = notes.replace("\\", "\\\\").replace("\n", "\\n")
             lines.append(f"NOTE:{safe_notes}")
@@ -68,8 +65,6 @@ def build_vcard(
         if website.strip():       lines.append(f"URL:{website}")
         if photo_mode == "embed" and photo_b64 and photo_mediatype:
             lines.append(f"PHOTO:data:{photo_mediatype};base64,{photo_b64}")
-        elif photo_mode == "link" and photo_url and photo_mediatype:
-            lines.append(f"PHOTO;MEDIATYPE={photo_mediatype}:{photo_url}")
         if notes.strip():
             safe_notes = notes.replace("\\", "\\\\").replace("\n", "\\n")
             lines.append(f"NOTE:{safe_notes}")
@@ -132,7 +127,7 @@ def guess_mediatype(filename: str) -> str:
 
 # ---------- UI: Global settings ----------
 st.title("🔳 vCard & Multi-QR Generator")
-st.caption("vCard + WhatsApp + Website + Email + Phone + GEO + Text • PNG/SVG • HTTPS .vcf link • Optional profile photo")
+st.caption("vCard + WhatsApp + Website + Email + Phone • PNG/SVG • Permanent data: links • Optional photo")
 
 with st.sidebar:
     st.header("QR Settings")
@@ -148,7 +143,7 @@ with st.sidebar:
         logo_file = st.file_uploader("Upload logo", type=["png", "jpg", "jpeg"])
         if logo_file: logo_bytes = logo_file.read()
 
-# ---------- vCard builder (primary card) ----------
+# ---------- vCard builder ----------
 st.header("vCard")
 c1, c2 = st.columns(2)
 with c1:
@@ -164,46 +159,24 @@ organization = st.text_input("Organization / الشركة", value="Alraedah Fina
 title        = st.text_input("Title / المسمى الوظيفي")
 notes        = st.text_area("Notes / ملاحظات (اختياري)", height=100)
 
-st.subheader("App Base URL (for HTTPS link to .vcf)")
-app_base = st.text_input("Your app base URL (e.g., https://vcard-qr.streamlit.app)", value="http://localhost:8501")
-
-# Optional profile photo in the vCard
+# Optional profile photo
 st.subheader("Profile Photo (Optional)")
 add_photo = st.checkbox("Attach a profile photo")
-photo_mode = "none"; photo_mediatype=""; photo_url=""; photo_b64=""
+photo_mode = "none"; photo_mediatype=""; photo_b64=""
 if add_photo:
     photo_file = st.file_uploader("Upload headshot (JPG/PNG)", type=["jpg", "jpeg", "png"])
-    photo_attach_as = st.radio("Add to vCard as", ["HTTPS link (recommended)", "Embedded (base64)"], index=0)
     if photo_file is not None:
         _bytes = photo_file.read()
         photo_mediatype = guess_mediatype(photo_file.name)
-        if photo_attach_as.startswith("HTTPS"):
-            photo_mode = "link"
-            photo_raw_bytes = _bytes
-            photo_name = photo_file.name
-        else:
-            photo_mode = "embed"
-            photo_b64 = base64.b64encode(_bytes).decode("ascii")
+        photo_mode = "embed"
+        photo_b64 = base64.b64encode(_bytes).decode("ascii")
 
-# Filenames & static folders
+# Filenames
 display_name = (first_name + " " + last_name).strip() or "contact"
 base_name    = (first_name + "_" + last_name).strip("_") or "contact"
 timestamp    = datetime.now().strftime("%Y%m%d_%H%M%S")
-root_dir     = os.path.dirname(__file__)
-contacts_dir = os.path.join(root_dir, "static", "contacts")
-photos_dir   = os.path.join(root_dir, "static", "photos")
-os.makedirs(contacts_dir, exist_ok=True)
-os.makedirs(photos_dir,   exist_ok=True)
 
-# Save photo if mode=link to get a real HTTPS URL
-if add_photo and photo_mode == "link":
-    ext = os.path.splitext(photo_name)[1]
-    safe_photo = sanitize_filename(f"{base_name}_{timestamp}{ext}")
-    with open(os.path.join(photos_dir, safe_photo), "wb") as f:
-        f.write(photo_raw_bytes)
-    photo_url = app_base.rstrip("/") + "/static/photos/" + safe_photo
-
-# Build vCard & write .vcf for HTTPS link
+# Build vCard
 vcard = build_vcard(
     version=version,
     first_name=first_name,
@@ -217,78 +190,55 @@ vcard = build_vcard(
     notes=notes,
     photo_mode=photo_mode if add_photo else "none",
     photo_mediatype=photo_mediatype,
-    photo_url=photo_url,
     photo_b64=photo_b64,
 )
 
 vcf_fname = f"{base_name}_vcard_{timestamp}.vcf"
-with open(os.path.join(contacts_dir, vcf_fname), "wb") as f:
-    f.write(vcard_bytes(vcard))
-
-absolute_vcf_url = app_base.rstrip("/") + f"/static/contacts/{vcf_fname}"
+data_uri  = vcard_data_uri(vcard, base_name)
 
 st.subheader("vCard Preview")
 st.code(vcard, language="text")
 st.download_button("💳 Download vCard (.vcf)", data=vcard_bytes(vcard), file_name=vcf_fname, mime="text/vcard")
-st.text_input("Shareable vCard HTTPS link", value=absolute_vcf_url)
+st.text_input("Shareable vCard link (permanent)", value=data_uri)
 
-# ---------- MULTI-QR: build several QR contents ----------
+# ---------- MULTI-QR: build QR contents ----------
 st.header("Multi-QR Contents")
-st.caption("Add as many QR items as you need below.")
-
-# Controls per type
 with st.expander("WhatsApp"):
-    wa_num   = st.text_input("WhatsApp number (digits only, intl format)", placeholder="9665XXXXXXXX")
-    wa_msg   = st.text_input("Prefilled message (optional)")
+    wa_num = st.text_input("WhatsApp number (intl digits only)", placeholder="9665XXXXXXXX")
+    wa_msg = st.text_input("Prefilled message (optional)")
 with st.expander("Website"):
-    web_url  = st.text_input("Website URL", value="https://alraedah.sa")
+    web_url = st.text_input("Website URL", value="https://alraedah.sa")
 with st.expander("Email (mailto:)"):
-    mail_to  = st.text_input("To", placeholder="name@example.com")
-    mail_sub = st.text_input("Subject")
-    mail_body= st.text_area("Body", height=80)
+    mail_to   = st.text_input("To", placeholder="name@example.com")
+    mail_sub  = st.text_input("Subject")
+    mail_body = st.text_area("Body", height=80)
 with st.expander("Phone (tel:)"):
-    tel_num  = st.text_input("Phone number", placeholder="+966XXXXXXXXX")
-with st.expander("GEO Location"):
-    geo_lat  = st.text_input("Latitude", placeholder="24.7136")
-    geo_lon  = st.text_input("Longitude", placeholder="46.6753")
-with st.expander("Plain Text"):
-    txt_raw  = st.text_area("Text to encode", height=80)
+    tel_num = st.text_input("Phone number", placeholder="+966XXXXXXXXX")
 
-# What should the vCard QR encode?
+# Choice for vCard QR
 st.subheader("vCard QR Content")
-qr_choice = st.radio("vCard QR should encode:", ["Raw vCard text", "HTTPS link to .vcf"], index=0)
-force_link_if_big = st.checkbox("Auto-use HTTPS link if QR would be too dense", value=True)
+qr_choice = st.radio("vCard QR should encode:", ["Raw vCard text", "Permanent data URI"], index=0)
+force_link_if_big = st.checkbox("Auto-use Data URI if QR too dense", value=True)
 
-# Assemble items
+# Assemble QR items
 items = []
-
-# 1) vCard item
 items.append({
     "label": f"vCard ({display_name or 'contact'})",
-    "content": vcard if qr_choice == "Raw vCard text" else absolute_vcf_url,
+    "content": vcard if qr_choice == "Raw vCard text" else data_uri,
     "filename_stub": f"{base_name}_vcard_{timestamp}"
 })
-
-# 2) WhatsApp
 if wa_num:
     url = f"https://wa.me/{wa_num}"
-    if wa_msg:
-        url += f"?text={quote_plus(wa_msg)}"
+    if wa_msg: url += f"?text={quote_plus(wa_msg)}"
     items.append({"label": "WhatsApp", "content": url, "filename_stub": f"{base_name}_whatsapp_{timestamp}"})
-
-# 3) Website
 if web_url:
     items.append({"label": "Website", "content": web_url, "filename_stub": f"{base_name}_website_{timestamp}"})
-
-# 4) Email
 if mail_to:
     params = []
-    if mail_sub: params.append("subject=" + quote_plus(mail_sub))
+    if mail_sub:  params.append("subject=" + quote_plus(mail_sub))
     if mail_body: params.append("body=" + quote_plus(mail_body))
     url = f"mailto:{mail_to}" + (("?" + "&".join(params)) if params else "")
     items.append({"label": "Email", "content": url, "filename_stub": f"{base_name}_email_{timestamp}"})
-
-# 5) Phone
 if tel_num:
     items.append({"label": "Phone", "content": f"tel:{tel_num}", "filename_stub": f"{base_name}_phone_{timestamp}"})
 
@@ -299,17 +249,12 @@ if not items:
 else:
     cols = st.columns(2)
     for idx, item in enumerate(items):
-        label = item["label"]
-        content = item["content"]
-        stub = item["filename_stub"]
-
-        # Try to create the QR; auto-fallback for oversized vCard
+        label = item["label"]; content = item["content"]; stub = item["filename_stub"]
         img, err = try_make_qr(content, ec_label, box_size, border, as_svg=(fmt=="SVG"))
         if err == "oversize" and label.startswith("vCard") and force_link_if_big:
-            st.warning("vCard QR too dense. Preview switched to HTTPS link.")
-            content = absolute_vcf_url
+            st.warning("vCard QR too dense. Switched to data URI.")
+            content = data_uri
             img, _ = try_make_qr(content, ec_label, box_size, border, as_svg=(fmt=="SVG"))
-
         with cols[idx % 2]:
             st.markdown(f"**{label}**")
             if fmt == "SVG":
@@ -321,13 +266,11 @@ else:
                 if img:
                     pil = img.convert("RGB")
                     if with_logo and logo_bytes:
-                        try:
-                            pil = overlay_logo(pil, logo_bytes, scale=logo_scale)
-                        except Exception as e:
-                            st.warning(f"Logo overlay failed: {e}")
+                        try: pil = overlay_logo(pil, logo_bytes, scale=logo_scale)
+                        except Exception as e: st.warning(f"Logo overlay failed: {e}")
                     b = io.BytesIO(); pil.save(b, format="PNG")
                     st.image(b.getvalue())
                     st.download_button("⬇️ Download PNG", data=b.getvalue(), file_name=f"{stub}.png", mime="image/png")
 
 st.markdown("---")
-st.caption("Made with ❤️ by Abdurrahman Alowain.")
+st.caption("Made with ❤️ by Abdurrahman Alowain. Permanent links powered by data URIs.")
