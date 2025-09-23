@@ -11,63 +11,74 @@ from qrcode.constants import ERROR_CORRECT_L, ERROR_CORRECT_M, ERROR_CORRECT_Q, 
 # ---------- Page Config ----------
 st.set_page_config(page_title="vCard & Multi-QR Generator", page_icon="🔳", layout="centered")
 
-# ---------- Custom Styling ----------
+# ---------- Custom Styling with PingAR+LT ----------
 st.markdown(
     """
     <style>
-    /* Load Ping font */
+    /* Load PingAR+LT font family */
     @font-face {
-        font-family: 'PingAR+LT';
-        src: url('fonts/PingAR+LT-Regular.ttf') format('truetype');
+        font-family: 'PingAR';
+        src: url('/static/fonts/PingAR+LT-Regular.otf') format('opentype');
         font-weight: normal;
     }
     @font-face {
-        font-family: 'PingAR+LT';
-        src: url('fonts/PingAR+LT-Bold.ttf') format('truetype');
+        font-family: 'PingAR';
+        src: url('/static/fonts/PingAR+LT-Bold.otf') format('opentype');
         font-weight: bold;
+    }
+    @font-face {
+        font-family: 'PingAR';
+        src: url('/static/fonts/PingAR+LT-Light.otf') format('opentype');
+        font-weight: 300;
+    }
+    @font-face {
+        font-family: 'PingAR';
+        src: url('/static/fonts/PingAR+LT-Medium.otf') format('opentype');
+        font-weight: 500;
+    }
+    @font-face {
+        font-family: 'PingAR';
+        src: url('/static/fonts/PingAR+LT-ExtraLight.otf') format('opentype');
+        font-weight: 200;
+    }
+    @font-face {
+        font-family: 'PingAR';
+        src: url('/static/fonts/PingAR+LT-Thin.otf') format('opentype');
+        font-weight: 100;
+    }
+    @font-face {
+        font-family: 'PingAR';
+        src: url('/static/fonts/PingAR+LT-Hairline.otf') format('opentype');
+        font-weight: 50;
+    }
+    @font-face {
+        font-family: 'PingAR';
+        src: url('/static/fonts/PingAR+LT-Heavy.otf') format('opentype');
+        font-weight: 800;
+    }
+    @font-face {
+        font-family: 'PingAR';
+        src: url('/static/fonts/PingAR+LT-Black.otf') format('opentype');
+        font-weight: 900;
     }
 
     html, body, [class*="css"] {
-        font-family: 'PingAR+LT', sans-serif;
+        font-family: 'PingAR', sans-serif !important;
     }
 
     h1, h2, h3 {
-        font-family: 'PingAR+LT', sans-serif;
+        font-family: 'PingAR', sans-serif !important;
         text-align: center;
     }
 
-    /* Buttons */
-    .stButton>button {
-        background: linear-gradient(90deg, #4CAF50, #45a049);
-        color: white;
-        border-radius: 8px;
-        font-size: 16px;
-        padding: 8px 20px;
-        transition: 0.3s;
-    }
-    .stButton>button:hover {
-        background: linear-gradient(90deg, #45a049, #4CAF50);
-        transform: scale(1.05);
-    }
-
-    /* Text inputs */
-    .stTextInput>div>div>input,
-    .stTextArea>div>textarea {
-        border: 2px solid #4CAF50;
-        border-radius: 6px;
-        padding: 6px;
-    }
-
-    /* Download buttons */
-    .stDownloadButton>button {
-        background-color: #2196F3;
-        color: white;
-        border-radius: 6px;
-        font-size: 15px;
-        padding: 6px 18px;
-    }
-    .stDownloadButton>button:hover {
-        background-color: #1976D2;
+    /* QR card styling */
+    .qr-card {
+        background: #1E1E1E;
+        padding: 16px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        margin-bottom: 20px;
+        text-align: center;
     }
     </style>
     """,
@@ -75,19 +86,10 @@ st.markdown(
 )
 
 # ---------- Helpers ----------
-def build_vcard(
-    version: str,
-    first_name: str = "",
-    last_name: str = "",
-    organization: str = "",
-    title: str = "",
-    phone: str = "",
-    mobile: str = "",
-    email: str = "",
-    website: str = "",
-    notes: str = "",
-) -> str:
-    """Return a vCard 3.0/4.0 without address/timezone."""
+def build_vcard(version: str, first_name: str = "", last_name: str = "",
+    organization: str = "", title: str = "", phone: str = "", mobile: str = "",
+    email: str = "", website: str = "", notes: str = "") -> str:
+
     lines = []
     if version == "3.0":
         lines += ["BEGIN:VCARD", "VERSION:3.0"]
@@ -157,9 +159,9 @@ def try_make_qr(content: str, ec_label: str, box_size: int, border: int, as_svg:
             return None, "oversize"
         raise
 
-# ---------- UI: Global settings ----------
+# ---------- UI ----------
 st.title("🔳 vCard & Multi-QR Generator")
-st.caption("Generate vCard + WhatsApp + Website + Email + Phone + Text • PNG/SVG • Data URI links • Custom fonts & styling")
+st.caption("Generate vCard + WhatsApp + Website + Email + Phone + Text • PNG/SVG • Data URI links • PingAR font & styled QR cards")
 
 with st.sidebar:
     st.header("QR Settings")
@@ -209,11 +211,14 @@ absolute_vcf_url = vcard_data_uri(vcard, base_name)
 st.subheader("vCard Preview")
 st.code(vcard, language="text")
 st.download_button("💳 Download vCard (.vcf)", data=vcard_bytes(vcard), file_name=vcf_fname, mime="text/vcard")
+
+# Copy-to-clipboard button
 st.text_input("Shareable vCard Data URI link", value=absolute_vcf_url)
+st.markdown(f'<input type="text" value="{absolute_vcf_url}" id="copyTarget" style="width:100%;">', unsafe_allow_html=True)
+st.markdown('<button onclick="navigator.clipboard.writeText(document.getElementById(\'copyTarget\').value)">📋 Copy Link</button>', unsafe_allow_html=True)
 
-# ---------- MULTI-QR: build several QR contents ----------
+# ---------- MULTI-QR ----------
 st.header("Multi-QR Contents")
-
 with st.expander("WhatsApp"):
     wa_num   = st.text_input("WhatsApp number (digits only, intl format)", placeholder="9665XXXXXXXX")
     wa_msg   = st.text_input("Prefilled message (optional)")
@@ -276,7 +281,7 @@ else:
             img, _ = try_make_qr(content, ec_label, box_size, border, as_svg=(fmt=="SVG"))
 
         with cols[idx % 2]:
-            st.markdown(f"**{label}**")
+            st.markdown(f'<div class="qr-card"><strong>{label}</strong>', unsafe_allow_html=True)
             if fmt == "SVG":
                 if img:
                     b = io.BytesIO(); img.save(b)
@@ -288,6 +293,7 @@ else:
                     b = io.BytesIO(); pil.save(b, format="PNG")
                     st.image(b.getvalue())
                     st.download_button("⬇️ Download PNG", data=b.getvalue(), file_name=f"{stub}.png", mime="image/png")
+            st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("---")
 st.caption("Made with ❤️ by Abdurrahman Alowain.")
