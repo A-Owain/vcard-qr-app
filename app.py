@@ -13,6 +13,33 @@ st.set_page_config(page_title="vCard & Multi-QR Generator", page_icon="🔳", la
 st.markdown(
     """
     <style>
+    @font-face {
+        font-family: 'PingAR';
+        src: url('fonts/PingAR-Regular.ttf') format('truetype');
+        font-weight: normal;
+    }
+    @font-face {
+        font-family: 'PingAR';
+        src: url('fonts/PingAR-Bold.ttf') format('truetype');
+        font-weight: bold;
+    }
+
+    html, body, [class*="css"] {
+        font-family: 'PingAR', sans-serif;
+    }
+
+    h1, h2, h3 {
+        font-family: 'PingAR', sans-serif;
+        text-align: center;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    """
+    <style>
     /* Centered title */
     h1, h2, h3 {
         text-align: center;
