@@ -158,7 +158,7 @@ def try_make_qr(content: str, ec_label: str, box_size: int, border: int, as_svg:
         raise
 
 # ---------- UI: Global settings ----------
-st.title("🔳 vCard & Multi-QR Generator")
+st.title("🔳 موااااااح")
 st.caption("Generate vCard + WhatsApp + Website + Email + Phone + Text • PNG/SVG • Data URI links • Custom fonts & styling")
 
 with st.sidebar:
