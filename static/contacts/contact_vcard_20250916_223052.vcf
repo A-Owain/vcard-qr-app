@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+N:;;;;
+FN:
+ORG:Alraedah Finance
+TEL;TYPE=WORK,VOICE:8001249000
+URL:https://alraedah.sa
+PHOTO:http://localhost:8501/static/photos/contact_20250916_223052.jpeg
+END:VCARD

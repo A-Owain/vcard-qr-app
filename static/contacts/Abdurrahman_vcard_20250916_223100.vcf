@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+N:;Abdurrahman;;;
+FN:Abdurrahman
+ORG:Alraedah Finance
+TEL;TYPE=WORK,VOICE:8001249000
+URL:https://alraedah.sa
+PHOTO:http://localhost:8501/static/photos/abdurrahman_20250916_223100.jpeg
+END:VCARD

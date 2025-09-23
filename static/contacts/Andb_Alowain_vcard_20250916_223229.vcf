@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Alowain;Andb;;;
+FN:Andb Alowain
+ORG:Alraedah Finance
+TITLE:Marketing Specialist
+TEL;TYPE=WORK,VOICE:8001249000
+TEL;TYPE=CELL,VOICE:+966
+EMAIL;TYPE=PREF,INTERNET:Abdulrrahman.alowain@alraedah.sa
+URL:https://alraedah.sa
+PHOTO:http://localhost:8501/static/photos/andb_alowain_20250916_223229.png
+END:VCARD

@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:4.0
+N:Bajaber;Mohammed;;;
+FN:Mohammed Bajaber
+ORG:Alraedah Finance
+TITLE:Associate Data Engineer
+TEL;TYPE=work,voice;VALUE=uri:tel:8001249000
+TEL;TYPE=cell,voice;VALUE=uri:tel:+966508840518
+EMAIL:mohammed.ahmed@alraedah.sa
+URL:https://alraedah.sa
+END:VCARD

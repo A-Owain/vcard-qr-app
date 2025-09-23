@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Alowain;Abdurrahman;;;
+FN:Abdurrahman Alowain
+ORG:Alraedah Finance
+TEL;TYPE=WORK,VOICE:8001249000
+TEL;TYPE=CELL,VOICE:+966
+EMAIL;TYPE=PREF,INTERNET:Abdulrrahman.alowain@alraedah.sa
+URL:https://alraedah.sa
+PHOTO:http://localhost:8501/static/photos/abdurrahman_alowain_20250916_223115.jpeg
+END:VCARD
