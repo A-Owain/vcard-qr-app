@@ -17,22 +17,22 @@ st.markdown(
     <style>
     /* Load Ping font */
     @font-face {
-        font-family: 'PingAR';
-        src: url('fonts/PingAR-Regular.ttf') format('truetype');
+        font-family: 'PingAR+LT';
+        src: url('fonts/PingAR+LT-Regular.ttf') format('truetype');
         font-weight: normal;
     }
     @font-face {
-        font-family: 'PingAR';
-        src: url('fonts/PingAR-Bold.ttf') format('truetype');
+        font-family: 'PingAR+LT';
+        src: url('fonts/PingAR+LT-Bold.ttf') format('truetype');
         font-weight: bold;
     }
 
     html, body, [class*="css"] {
-        font-family: 'PingAR', sans-serif;
+        font-family: 'PingAR+LT', sans-serif;
     }
 
     h1, h2, h3 {
-        font-family: 'PingAR', sans-serif;
+        font-family: 'PingAR+LT', sans-serif;
         text-align: center;
     }
 
