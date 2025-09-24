@@ -69,29 +69,23 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
     qr.add_data(data)
     qr.make(fit=True)
 
-    img = qr.make_image(fill_color=fg_color, back_color=bg_color).convert("RGB")
+    if style == "square":
+        return qr.make_image(fill_color=fg_color, back_color=bg_color).convert("RGB")
 
-    if style == "dots":
-        img = qr_to_dots(img, fg_color, bg_color)
+    # ---- DOTS STYLE ----
+    matrix = qr.get_matrix()
+    rows, cols = len(matrix), len(matrix[0])
+    img_size = (cols + border * 2) * box_size
+    img = Image.new("RGB", (img_size, img_size), bg_color)
+    draw = ImageDraw.Draw(img)
 
-    if as_svg:
-        return qr.make_image(image_factory=SvgImage)
-    return img
-
-def qr_to_dots(img: Image.Image, fg_color="black", bg_color="white") -> Image.Image:
-    """Convert square QR modules into circular dots."""
-    w, h = img.size
-    module_size = w // img.width
-    dot_img = Image.new("RGB", (w, h), bg_color)
-    draw = ImageDraw.Draw(dot_img)
-
-    pixels = img.load()
-    for y in range(h):
-        for x in range(w):
-            if pixels[x, y] != (255, 255, 255):  # not white
-                r = module_size // 2
+    for r, row in enumerate(matrix):
+        for c, val in enumerate(row):
+            if val:  # dark module
+                x = (c + border) * box_size
+                y = (r + border) * box_size
                 draw.ellipse(
-                    (x, y, x + 1, y + 1),
+                    (x, y, x + box_size, y + box_size),
                     fill=fg_color
                 )
     return img
