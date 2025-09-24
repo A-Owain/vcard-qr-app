@@ -3,8 +3,8 @@ import io, os, re, base64, zipfile
 from datetime import datetime
 from urllib.parse import quote_plus
 import streamlit as st
-from PIL import Image, ImageDraw
 import pandas as pd
+from PIL import Image, ImageDraw
 import qrcode
 from qrcode.image.svg import SvgImage
 from qrcode.constants import ERROR_CORRECT_L, ERROR_CORRECT_M, ERROR_CORRECT_Q, ERROR_CORRECT_H
@@ -18,34 +18,21 @@ def sanitize_filename(s: str) -> str:
     s = re.sub(r"[^a-z0-9_.-]", "", s)
     return s or "file"
 
-def build_vcard(version, first_name="", last_name="", organization="", title="", phone="", mobile="", email="", website="", notes="") -> str:
-    lines = []
-    if version == "3.0":
-        lines += ["BEGIN:VCARD", "VERSION:3.0"]
-        lines.append(f"N:{last_name};{first_name};;;")
-        fn = (first_name + " " + last_name).strip()
-        lines.append(f"FN:{fn}")
-        if organization: lines.append(f"ORG:{organization}")
-        if title:        lines.append(f"TITLE:{title}")
-        if phone:        lines.append(f"TEL;TYPE=WORK,VOICE:{phone}")
-        if mobile:       lines.append(f"TEL;TYPE=CELL,VOICE:{mobile}")
-        if email:        lines.append(f"EMAIL;TYPE=PREF,INTERNET:{email}")
-        if website:      lines.append(f"URL:{website}")
-        if notes:        lines.append(f"NOTE:{notes}")
-        lines.append("END:VCARD")
-    else:
-        lines += ["BEGIN:VCARD", "VERSION:4.0"]
-        lines.append(f"N:{last_name};{first_name};;;")
-        fn = (first_name + " " + last_name).strip()
-        lines.append(f"FN:{fn}")
-        if organization: lines.append(f"ORG:{organization}")
-        if title:        lines.append(f"TITLE:{title}")
-        if phone:        lines.append(f"TEL;TYPE=work,voice;VALUE=uri:tel:{phone}")
-        if mobile:       lines.append(f"TEL;TYPE=cell,voice;VALUE=uri:tel:{mobile}")
-        if email:        lines.append(f"EMAIL:{email}")
-        if website:      lines.append(f"URL:{website}")
-        if notes:        lines.append(f"NOTE:{notes}")
-        lines.append("END:VCARD")
+def build_vcard(first_name, last_name, organization, title, phone, mobile, email, website, notes):
+    lines = [
+        "BEGIN:VCARD",
+        "VERSION:3.0",
+        f"N:{last_name};{first_name};;;",
+        f"FN:{first_name} {last_name}",
+    ]
+    if organization: lines.append(f"ORG:{organization}")
+    if title: lines.append(f"TITLE:{title}")
+    if phone: lines.append(f"TEL;TYPE=WORK,VOICE:{phone}")
+    if mobile: lines.append(f"TEL;TYPE=CELL,VOICE:{mobile}")
+    if email: lines.append(f"EMAIL;TYPE=PREF,INTERNET:{email}")
+    if website: lines.append(f"URL:{website}")
+    if notes: lines.append(f"NOTE:{notes}")
+    lines.append("END:VCARD")
     return "\n".join(lines)
 
 def vcard_bytes(vcard_str: str) -> bytes:
@@ -69,9 +56,6 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
     qr.add_data(data)
     qr.make(fit=True)
 
-    if as_svg:
-        return qr.make_image(image_factory=SvgImage)
-
     if style == "square":
         return qr.make_image(fill_color=fg_color, back_color=bg_color).convert("RGB")
 
@@ -90,165 +74,107 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
                 draw.ellipse((x, y, x + box_size, y + box_size), fill=fg_color)
     return img
 
-def try_make_qr(content: str, ec_label: str, box_size: int, border: int, as_svg: bool,
-                fg_color="black", bg_color="white", style="square"):
-    try:
-        return make_qr_image(content, ec_label, box_size, border, as_svg, fg_color, bg_color, style), None
-    except ValueError as e:
-        if "Invalid version" in str(e):
-            return None, "oversize"
-        raise
-
-# ---------- UI: Global settings ----------
+# ---------- UI ----------
 st.title("🔳 vCard & Multi-QR Generator")
-st.caption("Single or Batch Mode • vCard + QR • PNG & SVG • Custom Colors & Styles")
+tabs = st.tabs(["Single Mode", "Batch Mode"])
 
-with st.sidebar:
-    st.header("QR Settings")
-    version = st.selectbox("vCard Version", ["3.0", "4.0"], index=0)
+with tabs[0]:
+    st.header("Single vCard Generator")
+    first_name = st.text_input("First Name")
+    last_name = st.text_input("Last Name")
+    phone = st.text_input("Phone (Work)", "8001249000")
+    mobile = st.text_input("Mobile")
+    email = st.text_input("Email")
+    website = st.text_input("Website", "https://alraedah.sa")
+    organization = st.text_input("Organization", "Alraedah Finance")
+    title = st.text_input("Title")
+    notes = st.text_area("Notes")
+
     ec_label = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3)
     box_size = st.slider("Box Size", 4, 20, 10)
-    border   = st.slider("Border", 2, 10, 4)
-    fmt      = st.radio("QR Output Format", ["PNG", "SVG"], index=0)
-
-    st.subheader("🎨 QR Customization")
-    fg_color = st.color_picker("Foreground color", "#000000")
-    bg_color = st.color_picker("Background color", "#FFFFFF")
+    border = st.slider("Border", 2, 10, 4)
+    fg_color = st.color_picker("QR Foreground", "#000000")
+    bg_color = st.color_picker("QR Background", "#FFFFFF")
     style = st.radio("QR Style", ["square", "dots"], index=0)
 
-# ---------- Single vCard mode ----------
-st.header("👤 Single Contact Mode")
-c1, c2 = st.columns(2)
-with c1:
-    first_name = st.text_input("First Name")
-    phone      = st.text_input("Phone (Work)", value="8001249000")
-    email      = st.text_input("Email")
-with c2:
-    last_name  = st.text_input("Last Name")
-    mobile     = st.text_input("Mobile")
-    website    = st.text_input("Website", value="https://alraedah.sa")
+    if st.button("Generate vCard & QR"):
+        vcard = build_vcard(first_name, last_name, organization, title, phone, mobile, email, website, notes)
+        fname = sanitize_filename(first_name + "_" + last_name) or "contact"
 
-organization = st.text_input("Organization", value="Alraedah Finance")
-title        = st.text_input("Title")
-notes        = st.text_area("Notes", height=100)
+        # Save VCF
+        st.download_button("💳 Download vCard (.vcf)", data=vcard_bytes(vcard),
+                           file_name=f"{fname}.vcf", mime="text/vcard")
 
-display_name = (first_name + " " + last_name).strip() or "contact"
-base_name    = (first_name + "_" + last_name).strip("_") or "contact"
-timestamp    = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # Show QR
+        img = make_qr_image(vcard, ec_label, box_size, border, as_svg=False,
+                            fg_color=fg_color, bg_color=bg_color, style=style)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        st.image(buf.getvalue(), caption="QR Code")
+        st.download_button("⬇️ Download QR PNG", data=buf.getvalue(),
+                           file_name=f"{fname}_qr.png", mime="image/png")
 
-# Build vCard
-vcard = build_vcard(version, first_name, last_name, organization, title, phone, mobile, email, website, notes)
-vcf_fname = f"{base_name}_vcard_{timestamp}.vcf"
+with tabs[1]:
+    st.header("Batch Mode (Excel Upload)")
+    st.caption("Upload an Excel with columns: First Name, Last Name, Phone, Mobile, Email, Website, Organization, Title, Notes")
 
-st.subheader("vCard Preview")
-st.code(vcard, language="text")
-st.download_button("💳 Download vCard (.vcf)", data=vcard_bytes(vcard), file_name=vcf_fname, mime="text/vcard")
+    # Auto batch folder name
+    today_str = datetime.now().strftime("%Y%m%d")
+    user_input = st.text_input("Parent folder name for this batch (optional)", value="")
+    batch_folder = (user_input.strip() or "Batch_Contacts") + "_" + today_str
 
-# QR
-st.subheader("QR for this vCard")
-img, _ = try_make_qr(vcard, ec_label, box_size, border, as_svg=(fmt=="SVG"),
-                     fg_color=fg_color, bg_color=bg_color, style=style)
-if img:
-    if fmt == "SVG":
-        b = io.BytesIO(); img.save(b)
-        st.markdown(b.getvalue().decode("utf-8"), unsafe_allow_html=True)
-    else:
-        b = io.BytesIO(); img.save(b, format="PNG")
-        st.image(b.getvalue())
-        st.download_button("⬇️ Download QR (PNG)", data=b.getvalue(), file_name=f"{base_name}_qr.png", mime="image/png")
+    excel_file = st.file_uploader("Upload Excel", type=["xlsx"])
+    if excel_file:
+        df = pd.read_excel(excel_file)
+        st.write("Preview:", df.head())
 
-# ---------- Batch Mode ----------
-st.header("📂 Batch Mode")
+        ec_label = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3, key="batch_ec")
+        box_size = st.slider("Box Size", 4, 20, 10, key="batch_box")
+        border = st.slider("Border", 2, 10, 4, key="batch_border")
+        fg_color = st.color_picker("QR Foreground", "#000000", key="batch_fg")
+        bg_color = st.color_picker("QR Background", "#FFFFFF", key="batch_bg")
+        style = st.radio("QR Style", ["square", "dots"], index=0, key="batch_style")
 
-def generate_excel_template():
-    df = pd.DataFrame([
-        {
-            "First Name": "Abdurrahman",
-            "Last Name": "Ali",
-            "Organization": "Alraedah Finance",
-            "Title": "Manager",
-            "Phone": "8001249000",
-            "Mobile": "966500000000",
-            "Email": "abdurrahman@alraedah.sa",
-            "Website": "https://alraedah.sa",
-            "Notes": "VIP Contact"
-        },
-        {
-            "First Name": "Sarah",
-            "Last Name": "Mohammed",
-            "Organization": "Elle Arabia",
-            "Title": "Designer",
-            "Phone": "8001234567",
-            "Mobile": "966511111111",
-            "Email": "sarah@elle.com",
-            "Website": "https://elle.com",
-            "Notes": "Cover Star"
-        }
-    ])
-    buf = io.BytesIO()
-    df.to_excel(buf, index=False, sheet_name="Template")
-    buf.seek(0)
-    return buf
+        if st.button("Generate Batch ZIP"):
+            zip_buf = io.BytesIO()
+            with zipfile.ZipFile(zip_buf, "w") as zf:
+                for _, row in df.iterrows():
+                    vcard = build_vcard(
+                        str(row.get("First Name", "")),
+                        str(row.get("Last Name", "")),
+                        str(row.get("Organization", "")),
+                        str(row.get("Title", "")),
+                        str(row.get("Phone", "")),
+                        str(row.get("Mobile", "")),
+                        str(row.get("Email", "")),
+                        str(row.get("Website", "")),
+                        str(row.get("Notes", "")),
+                    )
+                    fname = sanitize_filename(str(row.get("First Name", "")) + "_" + str(row.get("Last Name", ""))) or "contact"
 
-st.download_button(
-    "⬇️ Download Excel Template",
-    data=generate_excel_template(),
-    file_name="Batch_Template.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
+                    # Save vCard
+                    zf.writestr(f"{batch_folder}/{fname}/{fname}.vcf", vcard_bytes(vcard))
 
-uploaded = st.file_uploader("📤 Upload Filled Excel (xlsx or csv)", type=["xlsx", "csv"])
-
-# 🔹 NEW FEATURE: parent folder for batch
-batch_folder = st.text_input("Parent folder name for this batch (optional)", value="Batch_Contacts")
-
-if uploaded:
-    if uploaded.name.endswith(".csv"):
-        df = pd.read_csv(uploaded)
-    else:
-        df = pd.read_excel(uploaded)
-
-    if st.button("⚙️ Generate Batch ZIP"):
-        zip_buf = io.BytesIO()
-        with zipfile.ZipFile(zip_buf, "w") as zf:
-            for _, row in df.iterrows():
-                fname = sanitize_filename(f"{row['First Name']}_{row['Last Name']}")
-                vcard = build_vcard(
-                    version=version,
-                    first_name=row.get("First Name", ""),
-                    last_name=row.get("Last Name", ""),
-                    organization=row.get("Organization", ""),
-                    title=row.get("Title", ""),
-                    phone=str(row.get("Phone", "")),
-                    mobile=str(row.get("Mobile", "")),
-                    email=row.get("Email", ""),
-                    website=row.get("Website", ""),
-                    notes=row.get("Notes", ""),
-                )
-                vcf_bytes = vcard_bytes(vcard)
-                zf.writestr(f"{batch_folder}/{fname}/{fname}.vcf", vcf_bytes)
-
-                # QR PNG
-                img = make_qr_image(vcard, ec_label, box_size, border, as_svg=False,
-                                    fg_color=fg_color, bg_color=bg_color, style=style)
-                img_buf = io.BytesIO()
-                img.save(img_buf, format="PNG")
-                img_buf.seek(0)
-                zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.png", img_buf.getvalue())
-
-                # QR SVG
-                svg_buf = io.BytesIO()
-                img_svg = make_qr_image(vcard, ec_label, box_size, border, as_svg=True,
+                    # PNG QR
+                    img = make_qr_image(vcard, ec_label, box_size, border, as_svg=False,
                                         fg_color=fg_color, bg_color=bg_color, style=style)
-                img_svg.save(svg_buf)
-                svg_buf.seek(0)
-                zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.svg", svg_buf.getvalue())
+                    img_buf = io.BytesIO()
+                    img.save(img_buf, format="PNG")
+                    zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.png", img_buf.getvalue())
 
-        zip_buf.seek(0)
+                    # SVG QR
+                    svg_img = make_qr_image(vcard, ec_label, box_size, border, as_svg=True,
+                                            fg_color=fg_color, bg_color=bg_color, style=style)
+                    svg_buf = io.BytesIO()
+                    svg_img.save(svg_buf)
+                    zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.svg", svg_buf.getvalue())
 
-        st.download_button(
-            "⬇️ Download All Contacts (ZIP)",
-            data=zip_buf,
-            file_name=f"{batch_folder}.zip",
-            mime="application/zip"
-        )
+            zip_buf.seek(0)
+            st.download_button("⬇️ Download Batch ZIP", data=zip_buf.getvalue(),
+                               file_name=f"{batch_folder}.zip", mime="application/zip")
+
+            # Stats
+            st.success(f"✅ Batch completed!\n"
+                       f"Contacts processed: {len(df)}\n"
+                       f"Files per contact: 3 (VCF, PNG, SVG)\n"
+                       f"Total files in ZIP: {len(df) * 3}")
