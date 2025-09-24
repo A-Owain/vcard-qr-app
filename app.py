@@ -233,6 +233,37 @@ with tabs[1]:
 
     st.markdown('</div>', unsafe_allow_html=True)
 
+    # --- WhatsApp QR ---
+    st.subheader("💬 WhatsApp QR")
+    wa_num = st.text_input("WhatsApp Number (digits only, intl format)", key="wa_num")
+    wa_msg = st.text_input("Prefilled Message (optional)", key="wa_msg")
+    if st.button("Generate WhatsApp QR", key="wa_btn"):
+        wa_url = f"https://wa.me/{wa_num}"
+        if wa_msg:
+            wa_url += f"?text={quote_plus(wa_msg)}"
+        img = make_qr_image(wa_url, "M (15%)", 10, 4, as_svg=False)
+        buf = io.BytesIO(); img.save(buf, format="PNG")
+        st.image(buf.getvalue(), caption="WhatsApp QR")
+        st.download_button("⬇️ WhatsApp QR (PNG)", data=buf.getvalue(),
+                        file_name="whatsapp_qr.png", mime="image/png")
+
+    # --- Email QR ---
+    st.subheader("✉️ Email QR")
+    mail_to = st.text_input("Recipient", key="mail_to")
+    mail_sub = st.text_input("Subject", key="mail_sub")
+    mail_body = st.text_area("Body", key="mail_body")
+    if st.button("Generate Email QR", key="mail_btn"):
+        params = []
+        if mail_sub: params.append("subject=" + quote_plus(mail_sub))
+        if mail_body: params.append("body=" + quote_plus(mail_body))
+        mailto_url = f"mailto:{mail_to}" + (("?" + "&".join(params)) if params else "")
+        img = make_qr_image(mailto_url, "M (15%)", 10, 4, as_svg=False)
+        buf = io.BytesIO(); img.save(buf, format="PNG")
+        st.image(buf.getvalue(), caption="Email QR")
+        st.download_button("⬇️ Email QR (PNG)", data=buf.getvalue(),
+                        file_name="email_qr.png", mime="image/png")
+
+
 # =========================
 # Footer
 # =========================
