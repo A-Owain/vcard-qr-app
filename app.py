@@ -87,7 +87,7 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
                 )
     return img
 
-# ---------- Styling (light only) ----------
+# ---------- Styling ----------
 st.markdown("""
 <style>
 html, body, [class*="css"] {
@@ -189,6 +189,17 @@ with tabs[0]:
         svg_img.save(svg_buf)
         st.download_button("⬇️ Download QR (SVG)", data=svg_buf.getvalue(),
                            file_name=f"{fname}_qr.svg", mime="image/svg+xml", use_container_width=True)
+
+        # --- Secondary Option: ZIP with all files ---
+        zip_buf = io.BytesIO()
+        with zipfile.ZipFile(zip_buf, "w") as zf:
+            zf.writestr(f"{fname}/{fname}.vcf", vcard_bytes(vcard))
+            zf.writestr(f"{fname}/{fname}_qr.png", png_buf.getvalue())
+            zf.writestr(f"{fname}/{fname}_qr.svg", svg_buf.getvalue())
+        zip_buf.seek(0)
+
+        st.download_button("📦 Download All (ZIP)", data=zip_buf.getvalue(),
+                           file_name=f"{fname}_bundle.zip", mime="application/zip", use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 # -------- Batch Mode --------
