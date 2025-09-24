@@ -1,5 +1,5 @@
 # app.py
-import io, re, zipfile, base64, json
+import io, re, zipfile, base64
 from datetime import datetime
 from urllib.parse import urlencode, quote_plus
 import streamlit as st
@@ -9,16 +9,10 @@ import qrcode
 from qrcode.image.svg import SvgImage
 from qrcode.constants import ERROR_CORRECT_L, ERROR_CORRECT_M, ERROR_CORRECT_Q, ERROR_CORRECT_H
 
-# =========================
-# CONFIG
-# =========================
 st.set_page_config(page_title="vCard & Multi-QR Generator", page_icon="🔳", layout="centered")
 
-# Query params (must be after Streamlit import & set_page_config)
-qs = st.experimental_get_query_params()
-
 # =========================
-# HELPERS
+# Helpers
 # =========================
 def sanitize_filename(s: str) -> str:
     s = (s or "").strip().lower()
@@ -26,40 +20,22 @@ def sanitize_filename(s: str) -> str:
     s = re.sub(r"[^a-z0-9_.-]", "", s)
     return s or "file"
 
-def build_vcard_core(version, en_first, en_last, org, en_title, phone, mobile, email, website, notes,
-                     ar_first=None, ar_last=None, ar_title=None):
-    if version == "4.0":
-        lines = ["BEGIN:VCARD", "VERSION:4.0"]
-        lines.append(f"N:{en_last};{en_first};;;")
-        lines.append(f"FN:{en_first} {en_last}".strip())
-        if org: lines.append(f"ORG:{org}")
-        if en_title: lines.append(f"TITLE:{en_title}")
-        if phone: lines.append(f"TEL;TYPE=work,voice;VALUE=uri:tel:{phone}")
-        if mobile: lines.append(f"TEL;TYPE=cell,voice;VALUE=uri:tel:{mobile}")
-        if email: lines.append(f"EMAIL:{email}")
-        if website: lines.append(f"URL:{website}")
-        if (ar_first or ar_last):
-            fn_ar = (" ".join([ar_first or "", ar_last or ""])).strip()
-            if fn_ar: lines.append(f"FN;LANGUAGE=ar:{fn_ar}")
-        if ar_title: lines.append(f"TITLE;LANGUAGE=ar:{ar_title}")
-        if notes: lines.append(f"NOTE:{notes}")
-        lines.append("END:VCARD")
-    else:
-        lines = ["BEGIN:VCARD", "VERSION:3.0"]
-        lines.append(f"N:{en_last};{en_first};;;")
-        lines.append(f"FN:{en_first} {en_last}".strip())
-        if org: lines.append(f"ORG:{org}")
-        if en_title: lines.append(f"TITLE:{en_title}")
-        if phone: lines.append(f"TEL;TYPE=WORK,VOICE:{phone}")
-        if mobile: lines.append(f"TEL;TYPE=CELL,VOICE:{mobile}")
-        if email: lines.append(f"EMAIL;TYPE=PREF,INTERNET:{email}")
-        if website: lines.append(f"URL:{website}")
-        if notes: lines.append(f"NOTE:{notes}")
-        lines.append("END:VCARD")
+def build_vcard(first, last, org, title, phone, mobile, email, website, notes):
+    lines = ["BEGIN:VCARD", "VERSION:3.0"]
+    lines.append(f"N:{last};{first};;;")
+    lines.append(f"FN:{first} {last}".strip())
+    if org: lines.append(f"ORG:{org}")
+    if title: lines.append(f"TITLE:{title}")
+    if phone: lines.append(f"TEL;TYPE=WORK,VOICE:{phone}")
+    if mobile: lines.append(f"TEL;TYPE=CELL,VOICE:{mobile}")
+    if email: lines.append(f"EMAIL;TYPE=PREF,INTERNET:{email}")
+    if website: lines.append(f"URL:{website}")
+    if notes: lines.append(f"NOTE:{notes}")
+    lines.append("END:VCARD")
     return "\n".join(lines)
 
-def vcard_bytes(vcard_str: str) -> bytes:
-    return vcard_str.replace("\n", "\r\n").encode("utf-8")
+def vcard_bytes(vcard: str) -> bytes:
+    return vcard.replace("\n", "\r\n").encode("utf-8")
 
 EC_LEVELS = {
     "L (7%)": ERROR_CORRECT_L,
@@ -68,8 +44,8 @@ EC_LEVELS = {
     "H (30%)": ERROR_CORRECT_H,
 }
 
-def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: bool,
-                  fg_color="#000000", bg_color="#FFFFFF", style="square"):
+def make_qr_image(data: str, ec_label: str, box_size: int, border: int,
+                  as_svg: bool, fg_color="#000000", bg_color="#FFFFFF", style="square"):
     qr = qrcode.QRCode(
         version=None,
         error_correction=EC_LEVELS[ec_label],
@@ -85,15 +61,16 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
     if style == "square":
         return qr.make_image(fill_color=fg_color, back_color=bg_color).convert("RGB")
 
-    # custom dots/rounded
     matrix = qr.get_matrix()
     rows, cols = len(matrix), len(matrix[0])
     size = (cols + border * 2) * box_size
     img = Image.new("RGB", (size, size), bg_color)
     draw = ImageDraw.Draw(img)
+
     for r, row in enumerate(matrix):
         for c, val in enumerate(row):
-            if not val: continue
+            if not val:
+                continue
             x = (c + border) * box_size
             y = (r + border) * box_size
             if style == "dots":
@@ -101,149 +78,192 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
             elif style == "rounded":
                 pad = max(1, box_size // 8)
                 radius = max(2, box_size // 4)
-                draw.rounded_rectangle((x+pad, y+pad, x+box_size-pad, y+box_size-pad),
-                                       radius=radius, fill=fg_color)
+                draw.rounded_rectangle(
+                    (x + pad, y + pad, x + box_size - pad, y + box_size - pad),
+                    radius=radius, fill=fg_color
+                )
     return img
 
 # =========================
-# LANDING PAGES (safe, hosted inside app)
+# Styling
 # =========================
-if qs.get("view", [""])[0] == "contact":
-    st.title("📇 Contact Card")
-    st.write("Save this contact or reach out instantly.")
-    if "vcf" in qs:
-        vcard_data = base64.b64decode(qs["vcf"][0]).decode("utf-8")
-        st.download_button("💾 Save vCard", vcard_bytes(vcard_data), "contact.vcf", "text/vcard")
-    if "wa" in qs: st.link_button("💬 WhatsApp", qs["wa"][0])
-    if "tel" in qs: st.link_button("📞 Call", qs["tel"][0])
-    if "site" in qs: st.link_button("🌐 Website", qs["site"][0])
-    st.stop()
-
-if qs.get("view", [""])[0] == "links":
-    st.title("🔗 Link Hub")
-    st.write("Quick links")
-    links = json.loads(base64.b64decode(qs["links"][0]).decode("utf-8")) if "links" in qs else []
-    for label, url in links:
-        st.link_button(label, url, use_container_width=True)
-    st.stop()
-
-if qs.get("view", [""])[0] == "audio":
-    st.title("🔊 Audio Greeting")
-    st.write("Play audio + save contact")
-    if "audio" in qs:
-        st.audio(base64.b64decode(qs["audio"][0]))
-    if "vcf" in qs:
-        vcard_data = base64.b64decode(qs["vcf"][0]).decode("utf-8")
-        st.download_button("💾 Save vCard", vcard_bytes(vcard_data), "contact.vcf", "text/vcard")
-    st.stop()
+st.markdown("""
+<style>
+html, body, [class*="css"] {
+    font-family: 'PingAR LT Regular', sans-serif;
+    color: #222;
+    background-color: #FAFAFA;
+}
+.block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1000px; }
+.card {
+    background-color: #FFF; padding: 1.5rem; margin-bottom: 1.5rem;
+    border-radius: 12px; border: 1px solid #E0E0E0; box-shadow: none;
+}
+.qr-preview {
+    display: flex; justify-content: center; padding: 1rem;
+    background: #F5F5F5; border-radius: 10px; margin-bottom: 1rem; border: 1px solid #E0E0E0;
+}
+.stDownloadButton button, .stButton button { border-radius: 8px !important; background-color: #3A3A3A !important; color: #FFF !important; font-weight: 500 !important; border: none !important;}
+.stDownloadButton button:hover, .stButton button:hover { background-color: #1E1E1E !important; }
+</style>
+""", unsafe_allow_html=True)
 
 # =========================
-# MAIN APP
+# Tabs
 # =========================
 st.title("🔳 vCard & Multi-QR Generator")
-tabs = st.tabs(["Single Mode", "Batch Mode", "Advanced QR", "Safe Landing Pages"])
-
-# ------------------------------
-# Sidebar
-# ------------------------------
-with st.sidebar:
-    st.header("App Base URL")
-    st.session_state.app_base_url = st.text_input("Base URL (needed for landing QR)",
-                                                  value=st.session_state.get("app_base_url", ""))
+tabs = st.tabs(["Single Mode", "Batch Mode", "Safe Landing Pages"])
 
 # ==============================================================
 # SINGLE MODE
 # ==============================================================
 with tabs[0]:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
     st.header("Single vCard Generator")
-    first = st.text_input("First Name")
-    last = st.text_input("Last Name")
-    phone = st.text_input("Phone")
-    email = st.text_input("Email")
-    org   = st.text_input("Organization")
-    title = st.text_input("Title")
 
-    if st.button("Generate vCard & QR"):
-        vcard = build_vcard_core("3.0", first, last, org, title, phone, "", email, "", "")
+    first = st.text_input("First Name", key="single_first")
+    last = st.text_input("Last Name", key="single_last")
+    phone = st.text_input("Phone", key="single_phone")
+    mobile = st.text_input("Mobile", "+966", key="single_mobile")
+    email = st.text_input("Email", key="single_email")
+    website = st.text_input("Website", key="single_website")
+    org   = st.text_input("Organization", key="single_org")
+    title = st.text_input("Title", key="single_title")
+    notes = st.text_area("Notes", key="single_notes")
+
+    ec_label = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3, key="single_ec")
+    box_size = st.slider("Box Size", 4, 20, 10, key="single_box")
+    border   = st.slider("Border", 2, 10, 4, key="single_border")
+    fg_color = st.color_picker("QR Foreground", "#000000", key="single_fg")
+    bg_color = st.color_picker("QR Background", "#FFFFFF", key="single_bg")
+    style    = st.radio("QR Style", ["square", "dots", "rounded"], index=0, key="single_style")
+
+    if st.button("Generate vCard & QR", key="single_btn"):
+        vcard = build_vcard(first, last, org, title, phone, mobile, email, website, notes)
         fname = sanitize_filename(f"{first}_{last}")
-        st.download_button("💾 Download vCard", vcard_bytes(vcard), f"{fname}.vcf", "text/vcard")
 
-        img = make_qr_image(vcard, "M (15%)", 10, 4, as_svg=False)
-        buf = io.BytesIO(); img.save(buf, format="PNG")
-        st.image(buf.getvalue(), caption="QR Code")
-        st.download_button("⬇️ Download PNG", buf.getvalue(), f"{fname}.png", "image/png")
+        st.download_button("💳 Download vCard (.vcf)", data=vcard_bytes(vcard),
+                           file_name=f"{fname}.vcf", mime="text/vcard", key="single_dl_vcf")
+
+        img = make_qr_image(vcard, ec_label, box_size, border, as_svg=False,
+                            fg_color=fg_color, bg_color=bg_color, style=style)
+        png_buf = io.BytesIO(); img.save(png_buf, format="PNG")
+        st.image(png_buf.getvalue(), caption="QR Code")
+        st.download_button("⬇️ Download QR PNG", data=png_buf.getvalue(),
+                           file_name=f"{fname}_qr.png", mime="image/png", key="single_dl_png")
+
+        svg_img = make_qr_image(vcard, ec_label, box_size, border, as_svg=True)
+        svg_buf = io.BytesIO(); svg_img.save(svg_buf)
+        st.download_button("⬇️ Download QR SVG", data=svg_buf.getvalue(),
+                           file_name=f"{fname}_qr.svg", mime="image/svg+xml", key="single_dl_svg")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================================================
 # BATCH MODE
 # ==============================================================
 with tabs[1]:
-    st.header("Batch Mode")
-    st.caption("Upload Excel with: First Name, Last Name, Phone, Email, Organization, Title")
-    file = st.file_uploader("Upload Excel", type=["xlsx"])
-    if file and st.button("Generate Batch"):
-        df = pd.read_excel(file)
-        zip_buf = io.BytesIO()
-        with zipfile.ZipFile(zip_buf, "w") as zf:
-            for _, row in df.iterrows():
-                vcard = build_vcard_core("3.0", row["First Name"], row["Last Name"],
-                                         row["Organization"], row["Title"],
-                                         row["Phone"], "", row["Email"], "", "")
-                fname = sanitize_filename(f"{row['First Name']}_{row['Last Name']}")
-                zf.writestr(f"{fname}/{fname}.vcf", vcard_bytes(vcard))
-        zip_buf.seek(0)
-        st.download_button("⬇️ Download ZIP", zip_buf.getvalue(), "batch.zip", "application/zip")
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.header("Batch Mode (Excel Upload)")
 
-# ==============================================================
-# ADVANCED QR
-# ==============================================================
-with tabs[2]:
-    st.header("Advanced QR")
-    st.write("📶 WiFi, 📅 Events, 🪪 MeCard, 💰 Crypto")
-    # (similar to your old version — keep if needed)
+    def generate_excel_template():
+        cols = ["First Name", "Last Name", "Phone", "Mobile", "Email", "Website", "Organization", "Title", "Notes"]
+        df = pd.DataFrame(columns=cols)
+        buf = io.BytesIO(); df.to_excel(buf, index=False, sheet_name="Template"); buf.seek(0)
+        return buf.getvalue()
+
+    st.download_button("📥 Download Excel Template", data=generate_excel_template(),
+                       file_name="batch_template.xlsx",
+                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="batch_template")
+
+    today_str = datetime.now().strftime("%Y%m%d")
+    user_input = st.text_input("Parent folder name for this batch (optional)", key="batch_parent")
+    batch_folder = (user_input.strip() or "Batch_Contacts") + "_" + today_str
+
+    excel_file = st.file_uploader("Upload Excel", type=["xlsx"], key="batch_upload")
+    if excel_file:
+        df = pd.read_excel(excel_file)
+        st.write("Preview:", df.head())
+
+        ec_label = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3, key="batch_ec")
+        box_size = st.slider("Box Size", 4, 20, 10, key="batch_box")
+        border   = st.slider("Border", 2, 10, 4, key="batch_border")
+        fg_color = st.color_picker("QR Foreground", "#000000", key="batch_fg")
+        bg_color = st.color_picker("QR Background", "#FFFFFF", key="batch_bg")
+        style    = st.radio("QR Style", ["square", "dots", "rounded"], index=0, key="batch_style")
+
+        if st.button("Generate Batch ZIP", key="batch_btn"):
+            zip_buf = io.BytesIO()
+            with zipfile.ZipFile(zip_buf, "w") as zf:
+                for _, row in df.iterrows():
+                    vcard = build_vcard(
+                        str(row.get("First Name", "")),
+                        str(row.get("Last Name", "")),
+                        str(row.get("Organization", "")),
+                        str(row.get("Title", "")),
+                        str(row.get("Phone", "")),
+                        str(row.get("Mobile", "")),
+                        str(row.get("Email", "")),
+                        str(row.get("Website", "")),
+                        str(row.get("Notes", "")),
+                    )
+                    fname = sanitize_filename(f"{row.get('First Name','')}_{row.get('Last Name','')}") or "contact"
+
+                    zf.writestr(f"{batch_folder}/{fname}/{fname}.vcf", vcard_bytes(vcard))
+
+                    img = make_qr_image(vcard, ec_label, box_size, border, as_svg=False,
+                                        fg_color=fg_color, bg_color=bg_color, style=style)
+                    img_buf = io.BytesIO(); img.save(img_buf, format="PNG")
+                    zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.png", img_buf.getvalue())
+
+                    svg_img = make_qr_image(vcard, ec_label, box_size, border, as_svg=True)
+                    svg_buf = io.BytesIO(); svg_img.save(svg_buf)
+                    zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.svg", svg_buf.getvalue())
+
+            zip_buf.seek(0)
+            st.download_button("⬇️ Download Batch ZIP", data=zip_buf.getvalue(),
+                               file_name=f"{batch_folder}.zip", mime="application/zip", key="batch_dl_zip")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================================================
 # SAFE LANDING PAGES
 # ==============================================================
-with tabs[3]:
-    st.header("Safe Landing Pages")
-    st.write("Choose one type of landing page:")
-    st.markdown("1. **Contact Card**\n2. **Link Hub**\n3. **Audio Greeting**")
+with tabs[2]:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.header("Safe Landing Pages (inside app)")
 
-    choice = st.selectbox("Landing Type", ["Contact", "Links", "Audio"])
-    base = st.session_state.app_base_url.rstrip("/")
-    if not base:
-        st.info("⚠️ Please set Base URL in sidebar for shareable links")
+    page_type = st.selectbox("Choose Landing Page Type", ["Contact Card", "Mini Bio", "Link Hub"], key="landing_type")
 
-    if choice == "Contact":
-        name = st.text_input("Name")
-        phone = st.text_input("Phone")
-        wa = st.text_input("WhatsApp (digits)")
-        vcard = build_vcard_core("3.0", name, "", "", "", phone, "", "", "", "")
-        vcf_b64 = base64.b64encode(vcard.encode()).decode()
-        params = {"view": "contact", "vcf": vcf_b64, "tel": f"tel:{phone}", "wa": f"https://wa.me/{wa}"}
-        url = base + "?" + urlencode(params, quote_via=quote_plus) if base else ""
-        st.text_input("Landing URL", url)
+    if page_type == "Contact Card":
+        name = st.text_input("Name", key="landing_name")
+        phone = st.text_input("Phone", key="landing_phone")
+        wa = st.text_input("WhatsApp (digits only)", key="landing_wa")
+        email = st.text_input("Email", key="landing_email")
 
-    elif choice == "Links":
-        links = [("Website", "https://example.com"), ("Twitter", "https://twitter.com")]
-        links_b64 = base64.b64encode(json.dumps(links).encode()).decode()
-        params = {"view": "links", "links": links_b64}
-        url = base + "?" + urlencode(params, quote_via=quote_plus) if base else ""
-        st.text_input("Landing URL", url)
+        landing_html = f"<h2>{name}</h2><p>📞 {phone}</p><p>💬 {wa}</p><p>✉️ {email}</p>"
+        qr = make_qr_image(landing_html, "M (15%)", 10, 4, as_svg=False)
+        buf = io.BytesIO(); qr.save(buf, format="PNG")
+        st.image(buf.getvalue(), caption="Landing QR")
 
-    elif choice == "Audio":
-        audio_file = st.file_uploader("Upload Audio", type=["mp3", "wav"])
-        if audio_file:
-            raw = audio_file.read()
-            b64 = base64.b64encode(raw).decode()
-            params = {"view": "audio", "audio": b64}
-            url = base + "?" + urlencode(params, quote_via=quote_plus) if base else ""
-            st.text_input("Landing URL", url)
+    elif page_type == "Mini Bio":
+        bio = st.text_area("Your Mini Bio", key="landing_bio")
+        landing_html = f"<h2>About Me</h2><p>{bio}</p>"
+        qr = make_qr_image(landing_html, "M (15%)", 10, 4, as_svg=False)
+        buf = io.BytesIO(); qr.save(buf, format="PNG")
+        st.image(buf.getvalue(), caption="Landing QR")
+
+    elif page_type == "Link Hub":
+        links = st.text_area("Enter links (one per line)", key="landing_links")
+        landing_html = "<h2>My Links</h2>" + "".join([f"<p>🔗 <a href='{l}'>{l}</a></p>" for l in links.splitlines() if l.strip()])
+        qr = make_qr_image(landing_html, "M (15%)", 10, 4, as_svg=False)
+        buf = io.BytesIO(); qr.save(buf, format="PNG")
+        st.image(buf.getvalue(), caption="Landing QR")
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------- Footer ----------
 st.markdown("""
 ---
-<p style="text-align:center; font-size:0.9em; color:#888;">
+<p style="text-align: center; font-size: 0.9em; color:#888;">
 Developed by Abdulrrahman Alowain • <a href="https://x.com/a_owain" target="_blank">Follow Me</a>
 </p>
 """, unsafe_allow_html=True)
