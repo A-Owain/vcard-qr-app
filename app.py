@@ -62,7 +62,7 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
     if style == "square":
         return qr.make_image(fill_color=fg_color, back_color=bg_color).convert("RGB")
 
-    # Manual rendering for custom shapes (PNG only)
+    # Custom dots/rounded
     matrix = qr.get_matrix()
     rows, cols = len(matrix), len(matrix[0])
     size = (cols + border * 2) * box_size
@@ -82,8 +82,7 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
                 radius = max(2, box_size // 4)
                 draw.rounded_rectangle(
                     (x + pad, y + pad, x + box_size - pad, y + box_size - pad),
-                    radius=radius,
-                    fill=fg_color
+                    radius=radius, fill=fg_color
                 )
     return img
 
@@ -163,7 +162,7 @@ with tabs[0]:
     bg_color = st.color_picker("QR Background", "#FFFFFF", key="s_bg")
     style    = st.radio("QR Style", ["square", "dots", "rounded"], index=0, key="s_style")
 
-    if st.button("Generate vCard & QR", use_container_width=True, key="s_generate"):
+    if st.button("Generate vCard & QR", use_container_width=True, key="s_btn"):
         vcard = build_vcard(first_name, last_name, organization, title, phone, mobile, email, website, notes)
         fname = sanitize_filename(f"{first_name}_{last_name}")
 
@@ -195,22 +194,12 @@ with tabs[0]:
                            file_name=f"{fname}_qr.svg", mime="image/svg+xml",
                            use_container_width=True, key="s_dl_svg")
 
-        # ZIP + SUMMARY
+        # ZIP bundle
         zip_buf = io.BytesIO()
         with zipfile.ZipFile(zip_buf, "w") as zf:
             zf.writestr(f"{fname}/{fname}.vcf", vcard_bytes(vcard))
             zf.writestr(f"{fname}/{fname}_qr.png", png_buf.getvalue())
             zf.writestr(f"{fname}/{fname}_qr.svg", svg_buf.getvalue())
-            summary = [
-                "Single Contact Export Summary",
-                "-----------------------------",
-                f"Contact: {first_name} {last_name}",
-                f"Organization: {organization}",
-                f"Title: {title}",
-                f"Files: 3 (VCF, PNG, SVG)",
-                f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-            ]
-            zf.writestr(f"{fname}/SUMMARY.txt", "\n".join(summary))
         zip_buf.seek(0)
         st.download_button("📦 Download All (ZIP)", data=zip_buf.getvalue(),
                            file_name=f"{fname}_bundle.zip", mime="application/zip",
@@ -223,7 +212,6 @@ with tabs[0]:
 with tabs[1]:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.header("Batch Mode (Excel Upload)")
-    st.caption("Excel columns: First Name, Last Name, Phone, Mobile, Email, Website, Organization, Title, Notes")
 
     def generate_excel_template():
         cols = ["First Name", "Last Name", "Phone", "Mobile", "Email", "Website", "Organization", "Title", "Notes"]
@@ -246,7 +234,7 @@ with tabs[1]:
     st.download_button("📥 Download Excel Template", data=generate_excel_template(),
                        file_name="batch_template.xlsx",
                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                       use_container_width=True, key="b_dl_template")
+                       key="b_template")
 
     today_str = datetime.now().strftime("%Y%m%d")
     user_input = st.text_input("Parent folder name for this batch (optional)", key="b_parent")
@@ -257,7 +245,6 @@ with tabs[1]:
         df = pd.read_excel(excel_file)
         st.write("Preview:", df.head())
 
-        st.subheader("Batch QR Settings")
         ec_label = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3, key="b_ec")
         box_size = st.slider("Box Size", 4, 20, 10, key="b_box")
         border   = st.slider("Border", 2, 10, 4, key="b_border")
@@ -265,61 +252,38 @@ with tabs[1]:
         bg_color = st.color_picker("QR Background", "#FFFFFF", key="b_bg")
         style    = st.radio("QR Style", ["square", "dots", "rounded"], index=0, key="b_style")
 
-        if st.button("Generate Batch ZIP", use_container_width=True, key="b_generate"):
-            names = []
+        if st.button("Generate Batch ZIP", key="b_btn"):
             zip_buf = io.BytesIO()
             with zipfile.ZipFile(zip_buf, "w") as zf:
                 for _, row in df.iterrows():
-                    first = str(row.get("First Name", "")).strip()
-                    last  = str(row.get("Last Name", "")).strip()
+                    first, last = str(row.get("First Name", "")), str(row.get("Last Name", ""))
                     fname = sanitize_filename(f"{first}_{last}") or "contact"
-                    names.append(f"{first} {last}".strip())
 
                     vcard = build_vcard(first, last,
-                                        str(row.get("Organization", "")),
-                                        str(row.get("Title", "")),
-                                        str(row.get("Phone", "")),
-                                        str(row.get("Mobile", "")),
-                                        str(row.get("Email", "")),
-                                        str(row.get("Website", "")),
-                                        str(row.get("Notes", "")))
+                        str(row.get("Organization", "")),
+                        str(row.get("Title", "")),
+                        str(row.get("Phone", "")),
+                        str(row.get("Mobile", "")),
+                        str(row.get("Email", "")),
+                        str(row.get("Website", "")),
+                        str(row.get("Notes", "")))
 
-                    # .vcf
                     zf.writestr(f"{batch_folder}/{fname}/{fname}.vcf", vcard_bytes(vcard))
 
-                    # PNG
                     img = make_qr_image(vcard, ec_label, box_size, border, as_svg=False,
                                         fg_color=fg_color, bg_color=bg_color, style=style)
-                    png_buf = io.BytesIO()
-                    img.save(png_buf, format="PNG")
+                    png_buf = io.BytesIO(); img.save(png_buf, format="PNG")
                     zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.png", png_buf.getvalue())
 
-                    # SVG
                     svg_img = make_qr_image(vcard, ec_label, box_size, border, as_svg=True,
                                             fg_color=fg_color, bg_color=bg_color, style=style)
-                    svg_buf = io.BytesIO()
-                    svg_img.save(svg_buf)
+                    svg_buf = io.BytesIO(); svg_img.save(svg_buf)
                     zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.svg", svg_buf.getvalue())
-
-                # SUMMARY.txt
-                summary = [
-                    "Batch Export Summary",
-                    "---------------------",
-                    f"Batch Folder: {batch_folder}",
-                    f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-                    f"Contacts: {len(names)}",
-                    f"Files/contact: 3 (VCF, PNG, SVG)",
-                    f"Total files: {len(names) * 3}",
-                    "", "Contacts:"
-                ] + [f"- {n}" for n in names]
-                zf.writestr(f"{batch_folder}/SUMMARY.txt", "\n".join(summary))
 
             zip_buf.seek(0)
             st.download_button("⬇️ Download Batch ZIP", data=zip_buf.getvalue(),
                                file_name=f"{batch_folder}.zip", mime="application/zip",
-                               use_container_width=True, key="b_dl_zip")
-
-            st.success(f"✅ Batch completed! Contacts: {len(df)} | Files per contact: 3 | Total: {len(df) * 3}")
+                               key="b_dl_zip")
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================================================
@@ -329,67 +293,65 @@ with tabs[2]:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.header("Advanced QR Codes")
 
-    # --- WiFi ---
+    # WiFi
     st.subheader("📶 WiFi QR")
     ssid = st.text_input("SSID (Network Name)", key="adv_wifi_ssid")
     password = st.text_input("Password", key="adv_wifi_pass")
-    encryption = st.selectbox("Encryption", ["WPA", "WEP", "nopass"], index=0, key="adv_wifi_enc")
+    encryption = st.selectbox("Encryption", ["WPA", "WEP", "nopass"], key="adv_wifi_enc")
     if st.button("Generate WiFi QR", key="adv_wifi_btn"):
         wifi_data = f"WIFI:T:{encryption};S:{ssid};P:{password};;"
-        fname = sanitize_filename(f"wifi_{ssid}")
         img = make_qr_image(wifi_data, "M (15%)", 10, 4, as_svg=False)
         buf = io.BytesIO(); img.save(buf, format="PNG")
         st.image(buf.getvalue(), caption="WiFi QR")
-        st.download_button("⬇️ WiFi QR PNG", data=buf.getvalue(), file_name=f"{fname}.png", mime="image/png", key="adv_wifi_dl_png")
+        st.download_button("⬇️ WiFi QR PNG", data=buf.getvalue(),
+                           file_name="wifi_qr.png", mime="image/png",
+                           key="adv_wifi_dl")
 
-    # --- Event ---
+    # Event
     st.subheader("📅 Event QR")
     ev_title = st.text_input("Event Title", key="adv_ev_title")
-    ev_start = st.text_input("Start (YYYYMMDDTHHMMSSZ)", value="20250925T130000Z", key="adv_ev_start")
-    ev_end = st.text_input("End (YYYYMMDDTHHMMSSZ)", value="20250925T140000Z", key="adv_ev_end")
-    ev_loc = st.text_input("Location", key="adv_ev_loc")
-    ev_desc = st.text_area("Description", key="adv_ev_desc")
+    ev_start = st.text_input("Start (YYYYMMDDTHHMMSSZ)", key="adv_ev_start")
+    ev_end   = st.text_input("End (YYYYMMDDTHHMMSSZ)", key="adv_ev_end")
+    ev_loc   = st.text_input("Location", key="adv_ev_loc")
+    ev_desc  = st.text_area("Description", key="adv_ev_desc")
     if st.button("Generate Event QR", key="adv_ev_btn"):
-        event_data = f"""BEGIN:VEVENT
-SUMMARY:{ev_title}
-DTSTART:{ev_start}
-DTEND:{ev_end}
-LOCATION:{ev_loc}
-DESCRIPTION:{ev_desc}
-END:VEVENT"""
-        fname = sanitize_filename(f"event_{ev_title}")
+        event_data = f"BEGIN:VEVENT\nSUMMARY:{ev_title}\nDTSTART:{ev_start}\nDTEND:{ev_end}\nLOCATION:{ev_loc}\nDESCRIPTION:{ev_desc}\nEND:VEVENT"
         img = make_qr_image(event_data, "M (15%)", 10, 4, as_svg=False)
         buf = io.BytesIO(); img.save(buf, format="PNG")
         st.image(buf.getvalue(), caption="Event QR")
-        st.download_button("⬇️ Event QR PNG", data=buf.getvalue(), file_name=f"{fname}.png", mime="image/png", key="adv_ev_dl_png")
+        st.download_button("⬇️ Event QR PNG", data=buf.getvalue(),
+                           file_name="event_qr.png", mime="image/png",
+                           key="adv_ev_dl")
 
-    # --- MeCard ---
+    # MeCard
     st.subheader("🪪 MeCard QR")
-    mc_name = st.text_input("Name (Last,First)", key="adv_mc_name")
+    mc_name  = st.text_input("Name (Last,First)", key="adv_mc_name")
     mc_phone = st.text_input("Phone", key="adv_mc_phone")
     mc_email = st.text_input("Email", key="adv_mc_email")
     if st.button("Generate MeCard QR", key="adv_mc_btn"):
         mecard = f"MECARD:N:{mc_name};TEL:{mc_phone};EMAIL:{mc_email};;"
-        fname = sanitize_filename(f"mecard_{mc_name}")
         img = make_qr_image(mecard, "M (15%)", 10, 4, as_svg=False)
         buf = io.BytesIO(); img.save(buf, format="PNG")
         st.image(buf.getvalue(), caption="MeCard QR")
-        st.download_button("⬇️ MeCard QR PNG", data=buf.getvalue(), file_name=f"{fname}.png", mime="image/png", key="adv_mc_dl_png")
+        st.download_button("⬇️ MeCard QR PNG", data=buf.getvalue(),
+                           file_name="mecard_qr.png", mime="image/png",
+                           key="adv_mc_dl")
 
-    # --- Crypto ---
+    # Crypto
     st.subheader("💰 Crypto Payment QR")
-    coin = st.selectbox("Cryptocurrency", ["bitcoin", "ethereum"], index=0, key="adv_cr_coin")
+    coin   = st.selectbox("Cryptocurrency", ["bitcoin", "ethereum"], key="adv_cr_coin")
     wallet = st.text_input("Wallet Address", key="adv_cr_wallet")
     amount = st.text_input("Amount (optional)", key="adv_cr_amount")
     if st.button("Generate Crypto QR", key="adv_cr_btn"):
         crypto_data = f"{coin}:{wallet}"
         if amount:
             crypto_data += f"?amount={amount}"
-        fname = sanitize_filename(f"{coin}_{wallet[:6]}")
         img = make_qr_image(crypto_data, "M (15%)", 10, 4, as_svg=False)
         buf = io.BytesIO(); img.save(buf, format="PNG")
         st.image(buf.getvalue(), caption="Crypto QR")
-        st.download_button("⬇️ Crypto QR PNG", data=buf.getvalue(), file_name=f"{fname}.png", mime="image/png", key="adv_cr_dl_png")
+        st.download_button("⬇️ Crypto QR PNG", data=buf.getvalue(),
+                           file_name="crypto_qr.png", mime="image/png",
+                           key="adv_cr_dl")
 
     st.markdown('</div>', unsafe_allow_html=True)
 
