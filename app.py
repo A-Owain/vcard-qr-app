@@ -250,10 +250,10 @@ with tabs[2]:
 # --- Email ---
 with tabs[3]:
     st.header(labels["tabs"][3])
-    mail_to = st.text_input(labels["email"])
-    mail_sub = st.text_input("Subject")
-    mail_body = st.text_area("Body")
-    if st.button("Generate Email QR"):
+    mail_to = st.text_input(labels["email"], key="email_to")
+    mail_sub = st.text_input("Subject", key="email_sub")
+    mail_body = st.text_area("Body", key="email_body")
+    if st.button("Generate Email QR", key="email_btn"):
         params = []
         if mail_sub: params.append("subject=" + quote_plus(mail_sub))
         if mail_body: params.append("body=" + quote_plus(mail_body))
@@ -261,6 +261,7 @@ with tabs[3]:
         img = make_qr_image(mailto_url, "M (15%)", 10, 4, as_svg=False)
         buf = io.BytesIO(); img.save(buf, format="PNG")
         st.image(buf.getvalue(), caption="Email QR")
+
 
 # --- Link ---
 with tabs[4]:
