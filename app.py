@@ -3,7 +3,7 @@ import io, os, re, base64, zipfile
 from datetime import datetime
 from urllib.parse import quote_plus
 import streamlit as st
-from PIL import Image
+from PIL import Image, ImageDraw
 import pandas as pd
 import qrcode
 from qrcode.image.svg import SvgImage
@@ -19,7 +19,6 @@ def sanitize_filename(s: str) -> str:
     return s or "file"
 
 def build_vcard(version, first_name="", last_name="", organization="", title="", phone="", mobile="", email="", website="", notes="") -> str:
-    """Return a vCard 3.0/4.0 without address/timezone."""
     lines = []
     if version == "3.0":
         lines += ["BEGIN:VCARD", "VERSION:3.0"]
@@ -59,7 +58,8 @@ EC_LEVELS = {
     "H (30%)": ERROR_CORRECT_H,
 }
 
-def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: bool):
+def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: bool,
+                  fg_color="black", bg_color="white", style="square"):
     qr = qrcode.QRCode(
         version=None,
         error_correction=EC_LEVELS[ec_label],
@@ -68,13 +68,38 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
     )
     qr.add_data(data)
     qr.make(fit=True)
+
+    img = qr.make_image(fill_color=fg_color, back_color=bg_color).convert("RGB")
+
+    if style == "dots":
+        img = qr_to_dots(img, fg_color, bg_color)
+
     if as_svg:
         return qr.make_image(image_factory=SvgImage)
-    return qr.make_image(fill_color="black", back_color="white")
+    return img
 
-def try_make_qr(content: str, ec_label: str, box_size: int, border: int, as_svg: bool):
+def qr_to_dots(img: Image.Image, fg_color="black", bg_color="white") -> Image.Image:
+    """Convert square QR modules into circular dots."""
+    w, h = img.size
+    module_size = w // img.width
+    dot_img = Image.new("RGB", (w, h), bg_color)
+    draw = ImageDraw.Draw(dot_img)
+
+    pixels = img.load()
+    for y in range(h):
+        for x in range(w):
+            if pixels[x, y] != (255, 255, 255):  # not white
+                r = module_size // 2
+                draw.ellipse(
+                    (x, y, x + 1, y + 1),
+                    fill=fg_color
+                )
+    return img
+
+def try_make_qr(content: str, ec_label: str, box_size: int, border: int, as_svg: bool,
+                fg_color="black", bg_color="white", style="square"):
     try:
-        return make_qr_image(content, ec_label, box_size, border, as_svg), None
+        return make_qr_image(content, ec_label, box_size, border, as_svg, fg_color, bg_color, style), None
     except ValueError as e:
         if "Invalid version" in str(e):
             return None, "oversize"
@@ -94,7 +119,7 @@ def overlay_logo(pil_img: Image.Image, logo_bytes: bytes, scale: float = 0.22) -
 
 # ---------- UI: Global settings ----------
 st.title("🔳 vCard & Multi-QR Generator")
-st.caption("Single or Batch Mode • vCard + QR codes • PNG/SVG • Downloadable Excel template")
+st.caption("Single or Batch Mode • Customizable QR Codes • PNG/SVG • Excel template")
 
 with st.sidebar:
     st.header("QR Settings")
@@ -109,6 +134,11 @@ with st.sidebar:
     if with_logo:
         logo_file = st.file_uploader("Upload logo", type=["png", "jpg", "jpeg"])
         if logo_file: logo_bytes = logo_file.read()
+
+    st.subheader("🎨 QR Customization")
+    fg_color = st.color_picker("Foreground color", "#000000")
+    bg_color = st.color_picker("Background color", "#FFFFFF")
+    style = st.radio("QR Style", ["square", "dots"], index=0)
 
 # ---------- Single vCard mode ----------
 st.header("👤 Single Contact Mode")
@@ -140,7 +170,8 @@ st.download_button("💳 Download vCard (.vcf)", data=vcard_bytes(vcard), file_n
 
 # QR
 st.subheader("QR for this vCard")
-img, _ = try_make_qr(vcard, ec_label, box_size, border, as_svg=(fmt=="SVG"))
+img, _ = try_make_qr(vcard, ec_label, box_size, border, as_svg=(fmt=="SVG"),
+                     fg_color=fg_color, bg_color=bg_color, style=style)
 if img:
     if fmt == "SVG":
         b = io.BytesIO(); img.save(b)
@@ -222,7 +253,8 @@ if uploaded:
                 zf.writestr(f"{fname}/{fname}.vcf", vcf_bytes)
 
                 # QR
-                img = make_qr_image(vcard, ec_label, box_size, border, as_svg=(fmt=="SVG"))
+                img = make_qr_image(vcard, ec_label, box_size, border, as_svg=(fmt=="SVG"),
+                                    fg_color=fg_color, bg_color=bg_color, style=style)
                 img_buf = io.BytesIO()
                 if fmt == "SVG":
                     img.save(img_buf)
