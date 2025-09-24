@@ -587,7 +587,7 @@ with tabs[3]:
     vcard_landing = build_vcard_core("3.0", en_first, en_last, org, en_title, phone, mobile, email, website, notes,
                                      ar_first=ar_first2, ar_last=ar_last2, ar_title=ar_title2)
     vcard_b64 = base64.b64encode(vcard_landing.replace("\n","\r\n").encode("utf-8")).decode("ascii")
-    vcf_data_uri = f"data:text/vcard;charset=utf-8;name={sanitize_filename(en_first+'_'+en_last')}.vcf;base64,{vcard_b64}"
+    vcf_data_uri = f"data:text/vcard;charset=utf-8;name={sanitize_filename(en_first+'_'+en_last)}.vcf;base64,{vcard_b64}"
 
     # Build actions
     wa_url  = f"https://wa.me/{wa_num}" if wa_num.strip() else ""
