@@ -1,6 +1,7 @@
 # app.py
 import io, re, zipfile
 from datetime import datetime
+from urllib.parse import quote_plus
 import streamlit as st
 import pandas as pd
 from PIL import Image, ImageDraw
@@ -112,7 +113,7 @@ html, body, [class*="css"] {
 # Main App
 # =========================
 st.title("🔳 vCard QR Generator")
-tabs = st.tabs(["Single Mode", "Batch Mode"])
+tabs = st.tabs(["Single Mode", "Batch Mode", "WhatsApp QR"])
 
 # ----------------------
 # Single Mode
@@ -170,7 +171,6 @@ with tabs[0]:
 with tabs[1]:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.header("Batch Mode (Excel Upload)")
-    st.caption("Excel columns: First Name, Last Name, Phone, Mobile, Email, Website, Organization, Title, Notes")
 
     def generate_excel_template():
         cols = ["First Name", "Last Name", "Phone", "Mobile", "Email", "Website", "Organization", "Title", "Notes"]
@@ -199,14 +199,12 @@ with tabs[1]:
         style = st.radio("QR Style", ["square", "dots"], index=0, key="b_style")
 
         if st.button("Generate Batch ZIP"):
-            names = []
             zip_buf = io.BytesIO()
             with zipfile.ZipFile(zip_buf, "w") as zf:
                 for _, row in df.iterrows():
                     first = str(row.get("First Name", "")).strip()
                     last = str(row.get("Last Name", "")).strip()
                     fname = sanitize_filename(f"{first}_{last}") or "contact"
-                    names.append(f"{first} {last}".strip())
 
                     vcard = build_vcard(first, last,
                                         str(row.get("Organization", "")),
@@ -233,11 +231,16 @@ with tabs[1]:
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- WhatsApp QR ---
-    st.subheader("💬 WhatsApp QR")
-    wa_num = st.text_input("WhatsApp Number (digits only, intl format)", key="wa_num")
-    wa_msg = st.text_input("Prefilled Message (optional)", key="wa_msg")
-    if st.button("Generate WhatsApp QR", key="wa_btn"):
+# ----------------------
+# WhatsApp QR
+# ----------------------
+with tabs[2]:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.header("💬 WhatsApp QR")
+
+    wa_num = st.text_input("WhatsApp Number (digits only, intl format, no +)")
+    wa_msg = st.text_input("Prefilled Message (optional)")
+    if st.button("Generate WhatsApp QR"):
         wa_url = f"https://wa.me/{wa_num}"
         if wa_msg:
             wa_url += f"?text={quote_plus(wa_msg)}"
@@ -245,24 +248,9 @@ with tabs[1]:
         buf = io.BytesIO(); img.save(buf, format="PNG")
         st.image(buf.getvalue(), caption="WhatsApp QR")
         st.download_button("⬇️ WhatsApp QR (PNG)", data=buf.getvalue(),
-                        file_name="whatsapp_qr.png", mime="image/png")
+                           file_name="whatsapp_qr.png", mime="image/png")
 
-    # --- Email QR ---
-    st.subheader("✉️ Email QR")
-    mail_to = st.text_input("Recipient", key="mail_to")
-    mail_sub = st.text_input("Subject", key="mail_sub")
-    mail_body = st.text_area("Body", key="mail_body")
-    if st.button("Generate Email QR", key="mail_btn"):
-        params = []
-        if mail_sub: params.append("subject=" + quote_plus(mail_sub))
-        if mail_body: params.append("body=" + quote_plus(mail_body))
-        mailto_url = f"mailto:{mail_to}" + (("?" + "&".join(params)) if params else "")
-        img = make_qr_image(mailto_url, "M (15%)", 10, 4, as_svg=False)
-        buf = io.BytesIO(); img.save(buf, format="PNG")
-        st.image(buf.getvalue(), caption="Email QR")
-        st.download_button("⬇️ Email QR (PNG)", data=buf.getvalue(),
-                        file_name="email_qr.png", mime="image/png")
-
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
 # Footer
