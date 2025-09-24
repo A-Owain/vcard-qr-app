@@ -57,7 +57,6 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
     qr.make(fit=True)
 
     if as_svg:
-        # Let qrcode render proper SVG (style not applied to SVG)
         return qr.make_image(image_factory=SvgImage)
 
     if style == "square":
@@ -77,11 +76,9 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
             x = (c + border) * box_size
             y = (r + border) * box_size
             if style == "dots":
-                # perfect circle per module
                 draw.ellipse((x, y, x + box_size, y + box_size), fill=fg_color)
             elif style == "rounded":
-                # rounded square per module
-                pad = max(1, box_size // 8)  # small inner padding
+                pad = max(1, box_size // 8)
                 radius = max(2, box_size // 4)
                 draw.rounded_rectangle(
                     (x + pad, y + pad, x + box_size - pad, y + box_size - pad),
@@ -90,102 +87,51 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
                 )
     return img
 
-# ---------- Theming ----------
-def css_block(dark: bool) -> str:
-    if not dark:
-        # Neutral minimal (light)
-        return """
-        <style>
-        html, body, [class*="css"] {
-            font-family: 'PingAR LT Regular', sans-serif;
-            color: #222222;
-            background-color: #FAFAFA;
-        }
-        .block-container {
-            padding-top: 2rem;
-            padding-bottom: 2rem;
-            max-width: 900px;
-        }
-        .card {
-            background-color: #FFFFFF;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            border-radius: 12px;
-            border: 1px solid #E0E0E0;
-            box-shadow: none;
-        }
-        .qr-preview {
-            display: flex;
-            justify-content: center;
-            padding: 1rem;
-            background: #F5F5F5;
-            border-radius: 10px;
-            margin-bottom: 1rem;
-            border: 1px solid #E0E0E0;
-        }
-        .stDownloadButton button, .stButton button {
-            border-radius: 8px !important;
-            background-color: #3A3A3A !important;
-            color: #FFFFFF !important;
-            font-weight: 500 !important;
-            border: none !important;
-        }
-        .stDownloadButton button:hover, .stButton button:hover {
-            background-color: #1E1E1E !important;
-        }
-        </style>
-        """
-    else:
-        # Neutral minimal (dark)
-        return """
-        <style>
-        html, body, [class*="css"] {
-            font-family: 'PingAR LT Regular', sans-serif;
-            color: #EAEAEA;
-            background-color: #121212;
-        }
-        .block-container {
-            padding-top: 2rem;
-            padding-bottom: 2rem;
-            max-width: 900px;
-        }
-        .card {
-            background-color: #1A1A1A;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            border-radius: 12px;
-            border: 1px solid #2A2A2A;
-            box-shadow: none;
-        }
-        .qr-preview {
-            display: flex;
-            justify-content: center;
-            padding: 1rem;
-            background: #181818;
-            border-radius: 10px;
-            margin-bottom: 1rem;
-            border: 1px solid #2A2A2A;
-        }
-        .stDownloadButton button, .stButton button {
-            border-radius: 8px !important;
-            background-color: #3A3A3A !important;
-            color: #FFFFFF !important;
-            font-weight: 500 !important;
-            border: none !important;
-        }
-        .stDownloadButton button:hover, .stButton button:hover {
-            background-color: #1E1E1E !important;
-        }
-        </style>
-        """
+# ---------- Styling (light only) ----------
+st.markdown("""
+<style>
+html, body, [class*="css"] {
+    font-family: 'PingAR LT Regular', sans-serif;
+    color: #222222;
+    background-color: #FAFAFA;
+}
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    max-width: 900px;
+}
+.card {
+    background-color: #FFFFFF;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #E0E0E0;
+    box-shadow: none;
+}
+.qr-preview {
+    display: flex;
+    justify-content: center;
+    padding: 1rem;
+    background: #F5F5F5;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    border: 1px solid #E0E0E0;
+}
+.stDownloadButton button, .stButton button {
+    border-radius: 8px !important;
+    background-color: #3A3A3A !important;
+    color: #FFFFFF !important;
+    font-weight: 500 !important;
+    border: none !important;
+}
+.stDownloadButton button:hover, .stButton button:hover {
+    background-color: #1E1E1E !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ---------- UI ----------
 st.title("🔳 vCard & Multi-QR Generator")
-
-# Dark mode toggle
-dark_mode = st.toggle("🌙 Dark Mode", value=False)
-st.markdown(css_block(dark_mode), unsafe_allow_html=True)
-
 tabs = st.tabs(["Single Mode", "Batch Mode"])
 
 # -------- Single Mode --------
@@ -208,27 +154,22 @@ with tabs[0]:
     notes = st.text_area("Notes")
 
     st.subheader("QR Settings")
-    ec_label = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3, key="single_ec")
-    box_size = st.slider("Box Size", 4, 20, 10, key="single_box")
-    border   = st.slider("Border", 2, 10, 4, key="single_border")
-    fg_color = st.color_picker("QR Foreground", "#000000", key="single_fg")
-    bg_color = st.color_picker("QR Background", "#FFFFFF", key="single_bg")
-    style    = st.radio("QR Style", ["square", "dots", "rounded"], index=0, key="single_style")
+    ec_label = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3)
+    box_size = st.slider("Box Size", 4, 20, 10)
+    border   = st.slider("Border", 2, 10, 4)
+    fg_color = st.color_picker("QR Foreground", "#000000")
+    bg_color = st.color_picker("QR Background", "#FFFFFF")
+    style    = st.radio("QR Style", ["square", "dots", "rounded"], index=0)
 
     if st.button("Generate vCard & QR", use_container_width=True):
         vcard = build_vcard(first_name, last_name, organization, title, phone, mobile, email, website, notes)
         fname = sanitize_filename(f"{first_name}_{last_name}")
 
         # vCard download
-        st.download_button(
-            "💳 Download vCard (.vcf)",
-            data=vcard_bytes(vcard),
-            file_name=f"{fname}.vcf",
-            mime="text/vcard",
-            use_container_width=True
-        )
+        st.download_button("💳 Download vCard (.vcf)", data=vcard_bytes(vcard),
+                           file_name=f"{fname}.vcf", mime="text/vcard", use_container_width=True)
 
-        # PNG QR (honors style & colors)
+        # PNG QR
         img = make_qr_image(vcard, ec_label, box_size, border, as_svg=False,
                             fg_color=fg_color, bg_color=bg_color, style=style)
         png_buf = io.BytesIO()
@@ -238,26 +179,16 @@ with tabs[0]:
         st.image(png_buf.getvalue(), caption="QR Code")
         st.markdown('</div>', unsafe_allow_html=True)
 
-        st.download_button(
-            "⬇️ Download QR (PNG)",
-            data=png_buf.getvalue(),
-            file_name=f"{fname}_qr.png",
-            mime="image/png",
-            use_container_width=True
-        )
+        st.download_button("⬇️ Download QR (PNG)", data=png_buf.getvalue(),
+                           file_name=f"{fname}_qr.png", mime="image/png", use_container_width=True)
 
-        # SVG QR (note: base qrcode SVG—no custom style/colors)
+        # SVG QR
         svg_img = make_qr_image(vcard, ec_label, box_size, border, as_svg=True,
                                 fg_color=fg_color, bg_color=bg_color, style=style)
         svg_buf = io.BytesIO()
         svg_img.save(svg_buf)
-        st.download_button(
-            "⬇️ Download QR (SVG)",
-            data=svg_buf.getvalue(),
-            file_name=f"{fname}_qr.svg",
-            mime="image/svg+xml",
-            use_container_width=True
-        )
+        st.download_button("⬇️ Download QR (SVG)", data=svg_buf.getvalue(),
+                           file_name=f"{fname}_qr.svg", mime="image/svg+xml", use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 # -------- Batch Mode --------
@@ -268,7 +199,6 @@ with tabs[1]:
 
     def generate_excel_template():
         cols = ["First Name", "Last Name", "Phone", "Mobile", "Email", "Website", "Organization", "Title", "Notes"]
-        # One example row to guide users
         df = pd.DataFrame([{
             "First Name": "Ali",
             "Last Name": "Saud",
@@ -285,13 +215,10 @@ with tabs[1]:
         buf.seek(0)
         return buf.getvalue()
 
-    st.download_button(
-        "📥 Download Excel Template",
-        data=generate_excel_template(),
-        file_name="batch_template.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
-    )
+    st.download_button("📥 Download Excel Template", data=generate_excel_template(),
+                       file_name="batch_template.xlsx",
+                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                       use_container_width=True)
 
     today_str = datetime.now().strftime("%Y%m%d")
     user_input = st.text_input("Parent folder name for this batch (optional)")
@@ -320,76 +247,55 @@ with tabs[1]:
                     fname = sanitize_filename(f"{first}_{last}") or "contact"
                     names.append(f"{first} {last}".strip())
 
-                    vcard = build_vcard(
-                        first_name=first,
-                        last_name=last,
-                        organization=str(row.get("Organization", "")),
-                        title=str(row.get("Title", "")),
-                        phone=str(row.get("Phone", "")),
-                        mobile=str(row.get("Mobile", "")),
-                        email=str(row.get("Email", "")),
-                        website=str(row.get("Website", "")),
-                        notes=str(row.get("Notes", "")),
-                    )
+                    vcard = build_vcard(first, last,
+                                        str(row.get("Organization", "")),
+                                        str(row.get("Title", "")),
+                                        str(row.get("Phone", "")),
+                                        str(row.get("Mobile", "")),
+                                        str(row.get("Email", "")),
+                                        str(row.get("Website", "")),
+                                        str(row.get("Notes", "")))
 
                     # .vcf
                     zf.writestr(f"{batch_folder}/{fname}/{fname}.vcf", vcard_bytes(vcard))
 
-                    # PNG QR (respects style & colors)
+                    # PNG
                     img = make_qr_image(vcard, ec_label, box_size, border, as_svg=False,
                                         fg_color=fg_color, bg_color=bg_color, style=style)
                     png_buf = io.BytesIO()
                     img.save(png_buf, format="PNG")
                     zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.png", png_buf.getvalue())
 
-                    # SVG QR (base qrcode SVG)
+                    # SVG
                     svg_img = make_qr_image(vcard, ec_label, box_size, border, as_svg=True,
                                             fg_color=fg_color, bg_color=bg_color, style=style)
                     svg_buf = io.BytesIO()
                     svg_img.save(svg_buf)
                     zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.svg", svg_buf.getvalue())
 
-                # SUMMARY.txt at root
-                total = len(names)
-                total_files = total * 3  # vcf + png + svg per contact
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                # SUMMARY.txt
                 summary = [
                     "Batch Export Summary",
                     "---------------------",
                     f"Batch Folder: {batch_folder}",
-                    f"Timestamp:    {timestamp}",
-                    f"Contacts:     {total}",
+                    f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                    f"Contacts: {len(names)}",
                     f"Files/contact: 3 (VCF, PNG, SVG)",
-                    f"Total files:  {total_files}",
-                    "",
-                    "Contacts:",
+                    f"Total files: {len(names) * 3}",
+                    "", "Contacts:"
                 ] + [f"- {n}" for n in names]
                 zf.writestr(f"{batch_folder}/SUMMARY.txt", "\n".join(summary))
 
             zip_buf.seek(0)
-            st.download_button(
-                "⬇️ Download Batch ZIP",
-                data=zip_buf.getvalue(),
-                file_name=f"{batch_folder}.zip",
-                mime="application/zip",
-                use_container_width=True
-            )
+            st.download_button("⬇️ Download Batch ZIP", data=zip_buf.getvalue(),
+                               file_name=f"{batch_folder}.zip", mime="application/zip",
+                               use_container_width=True)
 
-            st.success(
-                f"✅ Batch completed!\n"
-                f"Contacts processed: {len(df)}\n"
-                f"Files per contact: 3 (VCF, PNG, SVG)\n"
-                f"Total files in ZIP: {len(df) * 3}"
-            )
+            st.success(f"✅ Batch completed! Contacts: {len(df)} | Files per contact: 3 | Total: {len(df) * 3}")
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------- Footer ----------
-st.markdown(
-    """
-    <hr/>
-    <p style="text-align:center; font-size: 0.9em; color:#888;">
-        Developed by Abdulrrahman Alowain • <a href="https://x.com/a_owain" target="_blank">Follow Me</a>
-    </p>
-    """,
-    unsafe_allow_html=True
-)
+st.markdown("""
+---
+<p style="text-align: center; font-size: 0.9em; color:#888;">Developed by Abdulrrahman Alowain • <a href="https://x.com/a_owain" target="_blank">Follow Me</a></p>
+""", unsafe_allow_html=True)
