@@ -56,6 +56,9 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
     qr.add_data(data)
     qr.make(fit=True)
 
+    if as_svg:
+        return qr.make_image(image_factory=SvgImage)
+
     if style == "square":
         return qr.make_image(fill_color=fg_color, back_color=bg_color).convert("RGB")
 
@@ -118,6 +121,18 @@ with tabs[1]:
     st.header("Batch Mode (Excel Upload)")
     st.caption("Upload an Excel with columns: First Name, Last Name, Phone, Mobile, Email, Website, Organization, Title, Notes")
 
+    # ---- Excel Template Download ----
+    def generate_excel_template():
+        cols = ["First Name", "Last Name", "Phone", "Mobile", "Email", "Website", "Organization", "Title", "Notes"]
+        df = pd.DataFrame(columns=cols)
+        buf = io.BytesIO()
+        df.to_excel(buf, index=False, sheet_name="Template")
+        buf.seek(0)
+        return buf.getvalue()
+
+    st.download_button("📥 Download Excel Template", data=generate_excel_template(),
+                       file_name="batch_template.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
     # Auto batch folder name
     today_str = datetime.now().strftime("%Y%m%d")
     user_input = st.text_input("Parent folder name for this batch (optional)", value="")
@@ -162,12 +177,11 @@ with tabs[1]:
                     img.save(img_buf, format="PNG")
                     zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.png", img_buf.getvalue())
 
-                    # SVG QR
+                    # SVG QR (fixed)
                     svg_img = make_qr_image(vcard, ec_label, box_size, border, as_svg=True,
                                             fg_color=fg_color, bg_color=bg_color, style=style)
-                    svg_buf = io.BytesIO()
-                    svg_img.save(svg_buf)
-                    zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.svg", svg_buf.getvalue())
+                    svg_xml = svg_img.to_string().encode("utf-8")
+                    zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.svg", svg_xml)
 
             zip_buf.seek(0)
             st.download_button("⬇️ Download Batch ZIP", data=zip_buf.getvalue(),
