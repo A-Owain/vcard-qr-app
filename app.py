@@ -141,18 +141,18 @@ with tabs[0]:
         vcard = build_vcard(first, last, org, title, phone, mobile, email, website, notes, version)
         fname = sanitize_filename(f"{first}_{last}")
         # vCard
-        st.download_button("💳 Download vCard (.vcf)", data=vcard_bytes(vcard),
+        st.download_button("Download vCard (.vcf)", data=vcard_bytes(vcard),
                            file_name=f"{fname}.vcf", mime="text/vcard")
         # PNG QR
         img = make_qr_image(vcard, ec, box, border, as_svg=False, fg_color=fg, bg_color=bg, style=style)
         png_buf = io.BytesIO(); img.save(png_buf, format="PNG")
         st.image(png_buf.getvalue(), caption="QR Code")
-        st.download_button("⬇️ Download QR PNG", data=png_buf.getvalue(),
+        st.download_button("Download QR PNG", data=png_buf.getvalue(),
                            file_name=f"{fname}_qr.png", mime="image/png")
         # SVG QR
         svg_img = make_qr_image(vcard, ec, box, border, as_svg=True, fg_color=fg, bg_color=bg, style=style)
         svg_buf = io.BytesIO(); svg_img.save(svg_buf)
-        st.download_button("⬇️ Download QR SVG", data=svg_buf.getvalue(),
+        st.download_button("Download QR SVG", data=svg_buf.getvalue(),
                            file_name=f"{fname}_qr.svg", mime="image/svg+xml")
 
 # --- Batch Mode ---
@@ -163,7 +163,7 @@ with tabs[1]:
         df = pd.DataFrame(columns=cols)
         buf = io.BytesIO(); df.to_excel(buf, index=False, sheet_name="Template"); buf.seek(0)
         return buf.getvalue()
-    st.download_button("📥 Download Excel Template", data=generate_excel_template(),
+    st.download_button("Download Excel Template", data=generate_excel_template(),
                        file_name="batch_template.xlsx",
                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     today_str = datetime.now().strftime("%Y%m%d")
@@ -202,7 +202,7 @@ with tabs[1]:
                     svg_buf = io.BytesIO(); svg_img.save(svg_buf)
                     zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.svg", svg_buf.getvalue())
             zip_buf.seek(0)
-            st.download_button("⬇️ Download Batch ZIP", data=zip_buf.getvalue(),
+            st.download_button("Download Batch ZIP", data=zip_buf.getvalue(),
                                file_name=f"{batch_folder}.zip", mime="application/zip")
 
 # --- WhatsApp ---
@@ -217,7 +217,7 @@ with tabs[2]:
         img = make_qr_image(wa_url, "M (15%)", 10, 4, as_svg=False)
         buf = io.BytesIO(); img.save(buf, format="PNG")
         st.image(buf.getvalue(), caption="WhatsApp QR")
-        st.download_button("⬇️ WhatsApp QR (PNG)", data=buf.getvalue(),
+        st.download_button("WhatsApp QR (PNG)", data=buf.getvalue(),
                            file_name="whatsapp_qr.png", mime="image/png")
 
 # --- Email ---
@@ -234,7 +234,7 @@ with tabs[3]:
         img = make_qr_image(mailto_url, "M (15%)", 10, 4, as_svg=False)
         buf = io.BytesIO(); img.save(buf, format="PNG")
         st.image(buf.getvalue(), caption="Email QR")
-        st.download_button("⬇️ Email QR (PNG)", data=buf.getvalue(),
+        st.download_button("Email QR (PNG)", data=buf.getvalue(),
                            file_name="email_qr.png", mime="image/png")
 
 # --- Link ---
@@ -245,7 +245,7 @@ with tabs[4]:
         img = make_qr_image(link_url, "M (15%)", 10, 4, as_svg=False)
         buf = io.BytesIO(); img.save(buf, format="PNG")
         st.image(buf.getvalue(), caption="Link QR")
-        st.download_button("⬇️ Link QR (PNG)", data=buf.getvalue(),
+        st.download_button("Link QR (PNG)", data=buf.getvalue(),
                            file_name="link_qr.png", mime="image/png")
 
 # --- Location ---
@@ -266,7 +266,7 @@ with tabs[5]:
             img = make_qr_image(loc_url, "M (15%)", 10, 4, as_svg=False)
             buf = io.BytesIO(); img.save(buf, format="PNG")
             st.image(buf.getvalue(), caption="Location QR")
-            st.download_button("⬇️ Location QR (PNG)", data=buf.getvalue(),
+            st.download_button("Location QR (PNG)", data=buf.getvalue(),
                                file_name="location_qr.png", mime="image/png")
 
 # =========================
@@ -275,6 +275,6 @@ with tabs[5]:
 st.markdown("""
 ---
 <p style="text-align: center; font-size: 0.9em; color:#888;">
-Developed by Abdulrrahman Alowain • <a href="https://x.com/a_owain" target="_blank">Follow Me</a>
+Developed by Abdulrrahman Alowain | <a href="https://x.com/a_owain" target="_blank">Follow Me</a>
 </p>
 """, unsafe_allow_html=True)
