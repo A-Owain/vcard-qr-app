@@ -138,7 +138,7 @@ with tabs[0]:
     mobile = st.text_input("Mobile", "+966")
     email = st.text_input("Email")
     website = st.text_input("Website")
-    organization = st.text_input("Organization", "Alraedah Finance")
+    organization = st.text_input("Organization")
     title = st.text_input("Title")
     notes = st.text_area("Notes")
 
