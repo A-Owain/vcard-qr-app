@@ -16,7 +16,8 @@ st.markdown("""
 <style>
 html, body, [class*="css"] {
     font-family: 'PingAR LT Regular', sans-serif;
-    color: #222;
+    color: #222222;
+    background-color: #FAFAFA;
 }
 .block-container {
     padding-top: 2rem;
@@ -26,11 +27,12 @@ html, body, [class*="css"] {
 
 /* Cards */
 .card {
-    background-color: #ffffff15;
+    background-color: #FFFFFF;
     padding: 1.5rem;
     margin-bottom: 1.5rem;
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    border: 1px solid #E0E0E0;
+    box-shadow: none; /* minimal look */
 }
 
 /* QR Preview */
@@ -38,21 +40,22 @@ html, body, [class*="css"] {
     display: flex;
     justify-content: center;
     padding: 1rem;
-    background: #f9f9f9;
-    border-radius: 12px;
+    background: #F5F5F5;
+    border-radius: 10px;
     margin-bottom: 1rem;
+    border: 1px solid #E0E0E0;
 }
 
 /* Buttons */
 .stDownloadButton button, .stButton button {
-    border-radius: 10px !important;
-    background-color: #006B3F !important;
-    color: white !important;
-    font-weight: 600 !important;
+    border-radius: 8px !important;
+    background-color: #3A3A3A !important;
+    color: #FFFFFF !important;
+    font-weight: 500 !important;
     border: none !important;
 }
 .stDownloadButton button:hover, .stButton button:hover {
-    background-color: #004d2d !important;
+    background-color: #1E1E1E !important;
 }
 </style>
 """, unsafe_allow_html=True)
