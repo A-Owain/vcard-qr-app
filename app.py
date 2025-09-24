@@ -275,7 +275,7 @@ with tabs[3]:
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- Location QR ---
+# --- Location QR ---
     st.subheader("📍 Location QR")
     lat = st.text_input("Latitude", key="loc_lat")
     lon = st.text_input("Longitude", key="loc_lon")
@@ -290,12 +290,13 @@ with tabs[3]:
             st.warning("Please provide either latitude & longitude or a Google Maps link.")
             loc_url = ""
 
-        if loc_url:
-            img = make_qr_image(loc_url, "M (15%)", 10, 4, as_svg=False)
-            buf = io.BytesIO(); img.save(buf, format="PNG")
-            st.image(buf.getvalue(), caption="Location QR")
-            st.download_button("⬇️ Location QR (PNG)", data=buf.getvalue(),
-                               file_name="location_qr.png", mime="image/png")
+    if loc_url:
+        img = make_qr_image(loc_url, "M (15%)", 10, 4, as_svg=False)
+        buf = io.BytesIO(); img.save(buf, format="PNG")
+        st.image(buf.getvalue(), caption="Location QR")
+        st.download_button("⬇️ Location QR (PNG)", data=buf.getvalue(),
+                            file_name="location_qr.png", mime="image/png")
+
 
 # ----------------------
 # Link QR
