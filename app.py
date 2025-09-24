@@ -275,7 +275,9 @@ with tabs[3]:
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- Location QR ---
+    # --- Location QR ---
+with tabs[4]:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("📍 Location QR")
     lat = st.text_input("Latitude", key="loc_lat")
     lon = st.text_input("Longitude", key="loc_lon")
@@ -301,7 +303,7 @@ with tabs[3]:
 # ----------------------
 # Link QR
 # ----------------------
-with tabs[4]:
+with tabs[5]:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.header("🔗 Link QR")
 
