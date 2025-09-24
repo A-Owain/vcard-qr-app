@@ -199,6 +199,9 @@ st.download_button(
 
 uploaded = st.file_uploader("📤 Upload Filled Excel (xlsx or csv)", type=["xlsx", "csv"])
 
+# 🔹 NEW FEATURE: parent folder for batch
+batch_folder = st.text_input("Parent folder name for this batch (optional)", value="Batch_Contacts")
+
 if uploaded:
     if uploaded.name.endswith(".csv"):
         df = pd.read_csv(uploaded)
@@ -223,7 +226,7 @@ if uploaded:
                     notes=row.get("Notes", ""),
                 )
                 vcf_bytes = vcard_bytes(vcard)
-                zf.writestr(f"{fname}/{fname}.vcf", vcf_bytes)
+                zf.writestr(f"{batch_folder}/{fname}/{fname}.vcf", vcf_bytes)
 
                 # QR PNG
                 img = make_qr_image(vcard, ec_label, box_size, border, as_svg=False,
@@ -231,7 +234,7 @@ if uploaded:
                 img_buf = io.BytesIO()
                 img.save(img_buf, format="PNG")
                 img_buf.seek(0)
-                zf.writestr(f"{fname}/{fname}_qr.png", img_buf.getvalue())
+                zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.png", img_buf.getvalue())
 
                 # QR SVG
                 svg_buf = io.BytesIO()
@@ -239,13 +242,13 @@ if uploaded:
                                         fg_color=fg_color, bg_color=bg_color, style=style)
                 img_svg.save(svg_buf)
                 svg_buf.seek(0)
-                zf.writestr(f"{fname}/{fname}_qr.svg", svg_buf.getvalue())
+                zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.svg", svg_buf.getvalue())
 
         zip_buf.seek(0)
 
         st.download_button(
             "⬇️ Download All Contacts (ZIP)",
             data=zip_buf,
-            file_name="Batch_QR_vCards.zip",
+            file_name=f"{batch_folder}.zip",
             mime="application/zip"
         )
