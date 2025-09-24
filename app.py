@@ -69,6 +69,9 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
     qr.add_data(data)
     qr.make(fit=True)
 
+    if as_svg:
+        return qr.make_image(image_factory=SvgImage)
+
     if style == "square":
         return qr.make_image(fill_color=fg_color, back_color=bg_color).convert("RGB")
 
@@ -84,10 +87,7 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
             if val:  # dark module
                 x = (c + border) * box_size
                 y = (r + border) * box_size
-                draw.ellipse(
-                    (x, y, x + box_size, y + box_size),
-                    fill=fg_color
-                )
+                draw.ellipse((x, y, x + box_size, y + box_size), fill=fg_color)
     return img
 
 def try_make_qr(content: str, ec_label: str, box_size: int, border: int, as_svg: bool,
@@ -99,21 +99,9 @@ def try_make_qr(content: str, ec_label: str, box_size: int, border: int, as_svg:
             return None, "oversize"
         raise
 
-def overlay_logo(pil_img: Image.Image, logo_bytes: bytes, scale: float = 0.22) -> Image.Image:
-    logo = Image.open(io.BytesIO(logo_bytes)).convert("RGBA")
-    w = pil_img.size[0]
-    target_w = max(20, int(w * float(scale)))
-    aspect = logo.size[1] / logo.size[0]
-    resized = logo.resize((target_w, int(target_w * aspect)), Image.LANCZOS)
-    out = pil_img.convert("RGBA")
-    x = (out.size[0] - resized.size[0]) // 2
-    y = (out.size[1] - resized.size[1]) // 2
-    out.alpha_composite(resized, (x, y))
-    return out.convert("RGB")
-
 # ---------- UI: Global settings ----------
 st.title("🔳 vCard & Multi-QR Generator")
-st.caption("Single or Batch Mode • Customizable QR Codes • PNG/SVG • Excel template")
+st.caption("Single or Batch Mode • vCard + QR • PNG & SVG • Custom Colors & Styles")
 
 with st.sidebar:
     st.header("QR Settings")
@@ -122,12 +110,6 @@ with st.sidebar:
     box_size = st.slider("Box Size", 4, 20, 10)
     border   = st.slider("Border", 2, 10, 4)
     fmt      = st.radio("QR Output Format", ["PNG", "SVG"], index=0)
-    with_logo = st.checkbox("Add center logo (PNG/JPG)", value=False)
-    logo_scale = st.slider("Logo relative size", 0.10, 0.35, 0.22, 0.01, disabled=not with_logo)
-    logo_bytes = None
-    if with_logo:
-        logo_file = st.file_uploader("Upload logo", type=["png", "jpg", "jpeg"])
-        if logo_file: logo_bytes = logo_file.read()
 
     st.subheader("🎨 QR Customization")
     fg_color = st.color_picker("Foreground color", "#000000")
@@ -171,12 +153,9 @@ if img:
         b = io.BytesIO(); img.save(b)
         st.markdown(b.getvalue().decode("utf-8"), unsafe_allow_html=True)
     else:
-        pil = img.convert("RGB")
-        if with_logo and logo_bytes:
-            pil = overlay_logo(pil, logo_bytes, scale=logo_scale)
-        b = io.BytesIO(); pil.save(b, format="PNG")
+        b = io.BytesIO(); img.save(b, format="PNG")
         st.image(b.getvalue())
-        st.download_button("⬇️ Download QR", data=b.getvalue(), file_name=f"{base_name}_qr.png", mime="image/png")
+        st.download_button("⬇️ Download QR (PNG)", data=b.getvalue(), file_name=f"{base_name}_qr.png", mime="image/png")
 
 # ---------- Batch Mode ----------
 st.header("📂 Batch Mode")
@@ -246,19 +225,22 @@ if uploaded:
                 vcf_bytes = vcard_bytes(vcard)
                 zf.writestr(f"{fname}/{fname}.vcf", vcf_bytes)
 
-                # QR
-                img = make_qr_image(vcard, ec_label, box_size, border, as_svg=(fmt=="SVG"),
+                # QR PNG
+                img = make_qr_image(vcard, ec_label, box_size, border, as_svg=False,
                                     fg_color=fg_color, bg_color=bg_color, style=style)
                 img_buf = io.BytesIO()
-                if fmt == "SVG":
-                    img.save(img_buf)
-                    ext = "svg"
-                else:
-                    img = img.convert("RGB")
-                    img.save(img_buf, format="PNG")
-                    ext = "png"
+                img.save(img_buf, format="PNG")
                 img_buf.seek(0)
-                zf.writestr(f"{fname}/{fname}_qr.{ext}", img_buf.getvalue())
+                zf.writestr(f"{fname}/{fname}_qr.png", img_buf.getvalue())
+
+                # QR SVG
+                svg_buf = io.BytesIO()
+                img_svg = make_qr_image(vcard, ec_label, box_size, border, as_svg=True,
+                                        fg_color=fg_color, bg_color=bg_color, style=style)
+                img_svg.save(svg_buf)
+                svg_buf.seek(0)
+                zf.writestr(f"{fname}/{fname}_qr.svg", svg_buf.getvalue())
+
         zip_buf.seek(0)
 
         st.download_button(
