@@ -207,7 +207,7 @@ with tabs[1]:
 
 # --- WhatsApp ---
 with tabs[2]:
-    st.header("💬 WhatsApp QR")
+    st.header("WhatsApp QR")
     wa_num = st.text_input("WhatsApp Number (digits only, intl format)")
     wa_msg = st.text_input("Prefilled Message (optional)")
     if st.button("Generate WhatsApp QR"):
@@ -222,7 +222,7 @@ with tabs[2]:
 
 # --- Email ---
 with tabs[3]:
-    st.header("✉️ Email QR")
+    st.header("Email QR")
     mail_to = st.text_input("Recipient")
     mail_sub = st.text_input("Subject")
     mail_body = st.text_area("Body")
@@ -239,7 +239,7 @@ with tabs[3]:
 
 # --- Link ---
 with tabs[4]:
-    st.header("🔗 Link QR")
+    st.header("Link QR")
     link_url = st.text_input("Enter URL")
     if st.button("Generate Link QR"):
         img = make_qr_image(link_url, "M (15%)", 10, 4, as_svg=False)
@@ -250,7 +250,7 @@ with tabs[4]:
 
 # --- Location ---
 with tabs[5]:
-    st.header("📍 Location QR")
+    st.header("Location QR")
     lat = st.text_input("Latitude")
     lon = st.text_input("Longitude")
     gmap_link = st.text_input("Google Maps Link (optional)")
