@@ -135,7 +135,7 @@ with tabs[0]:
     first_name = st.text_input("First Name")
     last_name = st.text_input("Last Name")
     phone = st.text_input("Phone (Work)", "8001249000")
-    mobile = st.text_input("Mobile", ("+966" if phone.startswith("5") else "05") + "512345678")
+    mobile = st.text_input("Mobile", "+966")
     email = st.text_input("Email")
     website = st.text_input("Website")
     organization = st.text_input("Organization", "Alraedah Finance")
