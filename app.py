@@ -1,7 +1,6 @@
 # app.py
 import io, re, base64, zipfile
 from datetime import datetime
-from urllib.parse import quote_plus
 import streamlit as st
 import pandas as pd
 from PIL import Image, ImageDraw
@@ -154,9 +153,11 @@ with tabs[0]:
         vcard = build_vcard(first_name, last_name, organization, title, phone, mobile, email, website, notes)
         fname = sanitize_filename(first_name + "_" + last_name) or "contact"
 
+        # Download vCard
         st.download_button("💳 Download vCard (.vcf)", data=vcard_bytes(vcard),
                            file_name=f"{fname}.vcf", mime="text/vcard")
 
+        # PNG QR
         img = make_qr_image(vcard, ec_label, box_size, border, as_svg=False,
                             fg_color=fg_color, bg_color=bg_color, style=style)
         buf = io.BytesIO()
@@ -168,6 +169,14 @@ with tabs[0]:
 
         st.download_button("⬇️ Download QR PNG", data=buf.getvalue(),
                            file_name=f"{fname}_qr.png", mime="image/png")
+
+        # SVG QR
+        svg_img = make_qr_image(vcard, ec_label, box_size, border, as_svg=True,
+                                fg_color=fg_color, bg_color=bg_color, style=style)
+        svg_buf = io.BytesIO()
+        svg_img.save(svg_buf)
+        st.download_button("⬇️ Download QR SVG", data=svg_buf.getvalue(),
+                           file_name=f"{fname}_qr.svg", mime="image/svg+xml")
     st.markdown('</div>', unsafe_allow_html=True)
 
 with tabs[1]:
@@ -242,3 +251,9 @@ with tabs[1]:
                        f"Files per contact: 3 (VCF, PNG, SVG)\n"
                        f"Total files in ZIP: {len(df) * 3}")
     st.markdown('</div>', unsafe_allow_html=True)
+# ---------- Footer ----------
+st.markdown("""
+---
+<p style="text-align: center; font-size: 0.9em; color:
+#888888;">Developed by Abdulrrahman Alowain | <a href="https://alraedah.sa" target="_blank">Alraedah Finance</a></p>
+""", unsafe_allow_html=True)  
