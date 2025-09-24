@@ -192,7 +192,7 @@ with tabs[1]:
         buf.seek(0)
         return buf.getvalue()
 
-    st.download_button("📥 Download Excel Template", data=generate_excel_template(),
+    st.download_button("Download Excel Template", data=generate_excel_template(),
                        file_name="batch_template.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
     today_str = datetime.now().strftime("%Y%m%d")
