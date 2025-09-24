@@ -1,5 +1,5 @@
 # app.py
-import io, os, re, base64, zipfile
+import io, re, base64, zipfile
 from datetime import datetime
 from urllib.parse import quote_plus
 import streamlit as st
@@ -10,6 +10,52 @@ from qrcode.image.svg import SvgImage
 from qrcode.constants import ERROR_CORRECT_L, ERROR_CORRECT_M, ERROR_CORRECT_Q, ERROR_CORRECT_H
 
 st.set_page_config(page_title="vCard & Multi-QR Generator", page_icon="🔳", layout="centered")
+
+# ---------- Custom Styling ----------
+st.markdown("""
+<style>
+html, body, [class*="css"] {
+    font-family: 'PingAR LT Regular', sans-serif;
+    color: #222;
+}
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    max-width: 900px;
+}
+
+/* Cards */
+.card {
+    background-color: #ffffff15;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* QR Preview */
+.qr-preview {
+    display: flex;
+    justify-content: center;
+    padding: 1rem;
+    background: #f9f9f9;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+}
+
+/* Buttons */
+.stDownloadButton button, .stButton button {
+    border-radius: 10px !important;
+    background-color: #006B3F !important;
+    color: white !important;
+    font-weight: 600 !important;
+    border: none !important;
+}
+.stDownloadButton button:hover, .stButton button:hover {
+    background-color: #004d2d !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ---------- Helpers ----------
 def sanitize_filename(s: str) -> str:
@@ -82,6 +128,7 @@ st.title("🔳 vCard & Multi-QR Generator")
 tabs = st.tabs(["Single Mode", "Batch Mode"])
 
 with tabs[0]:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
     st.header("Single vCard Generator")
     first_name = st.text_input("First Name")
     last_name = st.text_input("Last Name")
@@ -104,24 +151,27 @@ with tabs[0]:
         vcard = build_vcard(first_name, last_name, organization, title, phone, mobile, email, website, notes)
         fname = sanitize_filename(first_name + "_" + last_name) or "contact"
 
-        # Save VCF
         st.download_button("💳 Download vCard (.vcf)", data=vcard_bytes(vcard),
                            file_name=f"{fname}.vcf", mime="text/vcard")
 
-        # Show QR
         img = make_qr_image(vcard, ec_label, box_size, border, as_svg=False,
                             fg_color=fg_color, bg_color=bg_color, style=style)
         buf = io.BytesIO()
         img.save(buf, format="PNG")
+
+        st.markdown('<div class="qr-preview">', unsafe_allow_html=True)
         st.image(buf.getvalue(), caption="QR Code")
+        st.markdown('</div>', unsafe_allow_html=True)
+
         st.download_button("⬇️ Download QR PNG", data=buf.getvalue(),
                            file_name=f"{fname}_qr.png", mime="image/png")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with tabs[1]:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
     st.header("Batch Mode (Excel Upload)")
     st.caption("Upload an Excel with columns: First Name, Last Name, Phone, Mobile, Email, Website, Organization, Title, Notes")
 
-    # ---- Excel Template Download ----
     def generate_excel_template():
         cols = ["First Name", "Last Name", "Phone", "Mobile", "Email", "Website", "Organization", "Title", "Notes"]
         df = pd.DataFrame(columns=cols)
@@ -133,7 +183,6 @@ with tabs[1]:
     st.download_button("📥 Download Excel Template", data=generate_excel_template(),
                        file_name="batch_template.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-    # Auto batch folder name
     today_str = datetime.now().strftime("%Y%m%d")
     user_input = st.text_input("Parent folder name for this batch (optional)", value="")
     batch_folder = (user_input.strip() or "Batch_Contacts") + "_" + today_str
@@ -167,36 +216,26 @@ with tabs[1]:
                     )
                     fname = sanitize_filename(str(row.get("First Name", "")) + "_" + str(row.get("Last Name", ""))) or "contact"
 
-                    # Save vCard
                     zf.writestr(f"{batch_folder}/{fname}/{fname}.vcf", vcard_bytes(vcard))
 
-                    # PNG QR
                     img = make_qr_image(vcard, ec_label, box_size, border, as_svg=False,
                                         fg_color=fg_color, bg_color=bg_color, style=style)
                     img_buf = io.BytesIO()
                     img.save(img_buf, format="PNG")
                     zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.png", img_buf.getvalue())
 
-                    # SVG QR (fixed)
-                    import io
-
                     svg_img = make_qr_image(vcard, ec_label, box_size, border, as_svg=True,
                                             fg_color=fg_color, bg_color=bg_color, style=style)
-
-                    # Save into a binary buffer
-                    svg_buffer = io.BytesIO()
-                    svg_img.save(svg_buffer)   # qrcode SvgImage writes XML into this
-                    svg_xml = svg_buffer.getvalue()
-
-                    zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.svg", svg_xml)
-                    
+                    svg_buf = io.BytesIO()
+                    svg_img.save(svg_buf)
+                    zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.svg", svg_buf.getvalue())
 
             zip_buf.seek(0)
             st.download_button("⬇️ Download Batch ZIP", data=zip_buf.getvalue(),
                                file_name=f"{batch_folder}.zip", mime="application/zip")
 
-            # Stats
             st.success(f"✅ Batch completed!\n"
                        f"Contacts processed: {len(df)}\n"
                        f"Files per contact: 3 (VCF, PNG, SVG)\n"
                        f"Total files in ZIP: {len(df) * 3}")
+    st.markdown('</div>', unsafe_allow_html=True)
