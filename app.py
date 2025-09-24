@@ -112,7 +112,7 @@ html, body, [class*="css"] {
 # =========================
 # Main App
 # =========================
-st.title("QR Generator Suite")
+st.title("🔳 QR Generator Suite")
 
 tabs = st.tabs(["vCard Single", "Batch Mode", "WhatsApp", "Email", "Link", "Location"])
 
@@ -169,15 +169,20 @@ with tabs[1]:
                        file_name="batch_template.xlsx",
                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
+    # Helper: sanitize names but keep case
+    def safe_name_keep_case(s: str) -> str:
+        s = (s or "").strip().replace(" ", "_")
+        s = re.sub(r"[^A-Za-z0-9_.-]", "_", s)
+        return s or "contact"
+
     today_str = datetime.now().strftime("%Y%m%d")
-    user_input = st.text_input("Parent folder name (optional)")
-    batch_folder = (user_input.strip() or "Batch_Contacts") + "_" + today_str
+    root_label = st.text_input("Root folder name", value="Batch_QR_vCards")
+    root_folder = f"{(root_label or 'Batch_QR_vCards')}_{today_str}"
 
     excel_file = st.file_uploader("Upload Excel", type=["xlsx"])
     if excel_file:
         df = pd.read_excel(excel_file)
         st.write("Preview:", df.head())
-
         ec = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3, key="b_ec")
         box = st.slider("Box Size", 4, 20, 10, key="b_box")
         border = st.slider("Border", 2, 10, 4, key="b_border")
@@ -186,15 +191,16 @@ with tabs[1]:
         style = st.radio("QR Style", ["square", "dots"], index=0, key="b_style")
 
         if st.button("Generate Batch ZIP"):
+            processed, missing = 0, 0
             zip_buf = io.BytesIO()
-            count = 0
             with zipfile.ZipFile(zip_buf, "w") as zf:
                 for _, row in df.iterrows():
                     first = str(row.get("First Name", "")).strip()
                     last  = str(row.get("Last Name", "")).strip()
-                    fname = sanitize_filename(f"{first}_{last}") or "contact"
-
-                    # Build vCard
+                    if not first and not last:
+                        missing += 1
+                        continue
+                    name_stub = safe_name_keep_case(f"{first}_{last}".strip("_"))
                     vcard = build_vcard(first, last,
                                         str(row.get("Organization", "")),
                                         str(row.get("Title", "")),
@@ -203,29 +209,21 @@ with tabs[1]:
                                         str(row.get("Email", "")),
                                         str(row.get("Website", "")),
                                         str(row.get("Notes", "")))
-
-                    # Save VCF
-                    zf.writestr(f"{batch_folder}/{fname}/{fname}.vcf", vcard_bytes(vcard))
-
-                    # Save PNG
-                    img = make_qr_image(vcard, ec, box, border, as_svg=False,
-                                        fg_color=fg, bg_color=bg, style=style)
+                    # Save vcf
+                    zf.writestr(f"{root_folder}/{name_stub}/{name_stub}.vcf", vcard_bytes(vcard))
+                    # Save png
+                    img = make_qr_image(vcard, ec, box, border, as_svg=False, fg_color=fg, bg_color=bg, style=style)
                     png_buf = io.BytesIO(); img.save(png_buf, format="PNG")
-                    zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.png", png_buf.getvalue())
-
-                    # Save SVG
-                    svg_img = make_qr_image(vcard, ec, box, border, as_svg=True,
-                                            fg_color=fg, bg_color=bg, style=style)
+                    zf.writestr(f"{root_folder}/{name_stub}/{name_stub}.png", png_buf.getvalue())
+                    # Save svg
+                    svg_img = make_qr_image(vcard, ec, box, border, as_svg=True, fg_color=fg, bg_color=bg, style=style)
                     svg_buf = io.BytesIO(); svg_img.save(svg_buf)
-                    zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.svg", svg_buf.getvalue())
-
-                    count += 1
-
+                    zf.writestr(f"{root_folder}/{name_stub}/{name_stub}.svg", svg_buf.getvalue())
+                    processed += 1
             zip_buf.seek(0)
             st.download_button("Download Batch ZIP", data=zip_buf.getvalue(),
-                               file_name=f"{batch_folder}.zip", mime="application/zip")
-            st.success(f"✅ Batch completed! {count} contacts processed. "
-                       f"Total files: {count * 3} (.vcf + .png + .svg)")
+                               file_name=f"{root_folder}.zip", mime="application/zip")
+            st.success(f"Done. Contacts processed: {processed} • Missing name rows: {missing} • Files created: {processed*3}")
 
 # --- WhatsApp ---
 with tabs[2]:
@@ -264,8 +262,8 @@ with tabs[4]:
     st.header("Link QR")
     link_url = st.text_input("Enter URL")
     if st.button("Generate Link QR"):
-        if not (link_url.startswith("http://") or link_url.startswith("https://")):
-            link_url = "https://" + link_url
+        if not link_url.startswith("http"):
+            link_url = "https://" + link_url.strip()
         img = make_qr_image(link_url, "M (15%)", 10, 4, as_svg=False)
         buf = io.BytesIO(); img.save(buf, format="PNG")
         st.image(buf.getvalue(), caption="Link QR")
