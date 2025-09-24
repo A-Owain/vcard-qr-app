@@ -18,7 +18,7 @@ def load_landing(page_id: str):
 # =========================
 # Landing page renderer
 # =========================
-qs = st.query_params
+qs = st.experimental_get_query_params()
 if "landing" in qs:
     page_id = qs["landing"][0]
     data = load_landing(page_id)
