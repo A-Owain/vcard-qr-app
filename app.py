@@ -178,10 +178,18 @@ with tabs[1]:
                     zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.png", img_buf.getvalue())
 
                     # SVG QR (fixed)
+                    from io import StringIO
+
                     svg_img = make_qr_image(vcard, ec_label, box_size, border, as_svg=True,
                                             fg_color=fg_color, bg_color=bg_color, style=style)
-                    svg_xml = svg_img.to_string().encode("utf-8")
+
+                    # Save into a string buffer
+                    svg_buffer = StringIO()
+                    svg_img.save(svg_buffer)   # works with qrcode's SvgImage
+                    svg_xml = svg_buffer.getvalue().encode("utf-8")
+
                     zf.writestr(f"{batch_folder}/{fname}/{fname}_qr.svg", svg_xml)
+
 
             zip_buf.seek(0)
             st.download_button("⬇️ Download Batch ZIP", data=zip_buf.getvalue(),
