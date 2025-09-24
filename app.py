@@ -20,34 +20,18 @@ def sanitize_filename(s: str) -> str:
     s = re.sub(r"[^a-z0-9_.-]", "", s)
     return s or "file"
 
-def build_vcard(first, last, org, title, phone, mobile, email, website, notes,
-                version="3.0", photo_url=None):
-    if version == "4.0":
-        lines = ["BEGIN:VCARD", "VERSION:4.0"]
-        lines.append(f"N:{last};{first};;;")
-        lines.append(f"FN:{first} {last}".strip())
-        if org: lines.append(f"ORG:{org}")
-        if title: lines.append(f"TITLE:{title}")
-        if phone: lines.append(f"TEL;TYPE=work,voice;VALUE=uri:tel:{phone}")
-        if mobile: lines.append(f"TEL;TYPE=cell,voice;VALUE=uri:tel:{mobile}")
-        if email: lines.append(f"EMAIL:{email}")
-        if website: lines.append(f"URL:{website}")
-        if notes: lines.append(f"NOTE:{notes}")
-        if photo_url: lines.append(f"PHOTO;VALUE=uri:{photo_url}")
-        lines.append("END:VCARD")
-    else:  # 3.0
-        lines = ["BEGIN:VCARD", "VERSION:3.0"]
-        lines.append(f"N:{last};{first};;;")
-        lines.append(f"FN:{first} {last}".strip())
-        if org: lines.append(f"ORG:{org}")
-        if title: lines.append(f"TITLE:{title}")
-        if phone: lines.append(f"TEL;TYPE=WORK,VOICE:{phone}")
-        if mobile: lines.append(f"TEL;TYPE=CELL,VOICE:{mobile}")
-        if email: lines.append(f"EMAIL;TYPE=PREF,INTERNET:{email}")
-        if website: lines.append(f"URL:{website}")
-        if notes: lines.append(f"NOTE:{notes}")
-        if photo_url: lines.append(f"PHOTO;VALUE=URL:{photo_url}")
-        lines.append("END:VCARD")
+def build_vcard(first, last, org, title, phone, mobile, email, website, notes, version="3.0"):
+    lines = ["BEGIN:VCARD", f"VERSION:{version}"]
+    lines.append(f"N:{last};{first};;;")
+    lines.append(f"FN:{first} {last}".strip())
+    if org: lines.append(f"ORG:{org}")
+    if title: lines.append(f"TITLE:{title}")
+    if phone: lines.append(f"TEL;TYPE=WORK,VOICE:{phone}")
+    if mobile: lines.append(f"TEL;TYPE=CELL,VOICE:{mobile}")
+    if email: lines.append(f"EMAIL;TYPE=PREF,INTERNET:{email}")
+    if website: lines.append(f"URL:{website}")
+    if notes: lines.append(f"NOTE:{notes}")
+    lines.append("END:VCARD")
     return "\n".join(lines)
 
 def vcard_bytes(vcard_str: str) -> bytes:
@@ -88,11 +72,6 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
                 draw.ellipse((x, y, x + box_size, y + box_size), fill=fg_color)
     return img
 
-def normalize_url(url: str) -> str:
-    if not url.startswith(("http://", "https://")):
-        return "https://" + url
-    return url
-
 # =========================
 # Styling
 # =========================
@@ -123,14 +102,13 @@ html, body, [class*="css"] {
 # =========================
 # Main App
 # =========================
-st.title("🔳 QR Generator Suite")
+st.title("QR Generator Suite")
 
 tabs = st.tabs(["vCard Single", "Batch Mode", "WhatsApp", "Email", "Link", "Location"])
 
 # --- vCard Single ---
 with tabs[0]:
     st.header("Single vCard Generator")
-    version = st.selectbox("vCard Version", ["3.0", "4.0", "Both"], index=0)
     first = st.text_input("First Name")
     last  = st.text_input("Last Name")
     org   = st.text_input("Organization")
@@ -140,29 +118,17 @@ with tabs[0]:
     email = st.text_input("Email")
     website= st.text_input("Website")
     notes = st.text_area("Notes")
-    photo_url = st.text_input("Profile Photo URL (optional)")
-
-    ec = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3)
-    box= st.slider("Box Size", 4, 20, 10)
-    border= st.slider("Border", 2, 10, 4)
-    fg = st.color_picker("QR Foreground", "#000000")
-    bg = st.color_picker("QR Background", "#FFFFFF")
-    style = st.radio("QR Style", ["square", "dots"], index=0)
 
     if st.button("Generate vCard & QR"):
-        versions = ["3.0", "4.0"] if version == "Both" else [version]
-        for v in versions:
-            vcard = build_vcard(first, last, org, title, phone, mobile, email, website, notes, v, photo_url)
-            fname = sanitize_filename(f"{first}_{last}_{v}")
-            # vCard file
-            st.download_button(f"Download vCard {v}", data=vcard_bytes(vcard),
-                               file_name=f"{fname}.vcf", mime="text/vcard")
-            # QR
-            img = make_qr_image(vcard, ec, box, border, as_svg=False, fg_color=fg, bg_color=bg, style=style)
-            buf = io.BytesIO(); img.save(buf, format="PNG")
-            st.image(buf.getvalue(), caption=f"QR Code v{v}")
-            st.download_button(f"Download QR {v} (PNG)", data=buf.getvalue(),
-                               file_name=f"{fname}_qr.png", mime="image/png")
+        vcard = build_vcard(first, last, org, title, phone, mobile, email, website, notes)
+        fname = sanitize_filename(f"{first}_{last}")
+        st.download_button("Download vCard (.vcf)", data=vcard_bytes(vcard),
+                           file_name=f"{fname}.vcf", mime="text/vcard")
+        img = make_qr_image(vcard, "M (15%)", 10, 4, as_svg=False)
+        buf = io.BytesIO(); img.save(buf, format="PNG")
+        st.image(buf.getvalue(), caption="QR Code")
+        st.download_button("Download QR PNG", data=buf.getvalue(),
+                           file_name=f"{fname}_qr.png", mime="image/png")
 
 # --- Batch Mode ---
 with tabs[1]:
@@ -176,30 +142,18 @@ with tabs[1]:
                        file_name="batch_template.xlsx",
                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     today_str = datetime.now().strftime("%Y%m%d")
-    user_input = st.text_input("Parent folder name (optional)")
-    batch_folder = (user_input.strip() or "Batch_Contacts") + "_" + today_str
+    batch_folder = "Batch_Contacts_" + today_str
     excel_file = st.file_uploader("Upload Excel", type=["xlsx"])
     if excel_file:
         df = pd.read_excel(excel_file)
         st.write("Preview:", df.head())
-        ec = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3, key="b_ec")
-        box = st.slider("Box Size", 4, 20, 10, key="b_box")
-        border = st.slider("Border", 2, 10, 4, key="b_border")
-        fg = st.color_picker("QR Foreground", "#000000", key="b_fg")
-        bg = st.color_picker("QR Background", "#FFFFFF", key="b_bg")
-        style = st.radio("QR Style", ["square", "dots"], index=0, key="b_style")
         if st.button("Generate Batch ZIP"):
             zip_buf = io.BytesIO()
-            errors = []
             with zipfile.ZipFile(zip_buf, "w") as zf:
-                for idx, row in df.iterrows():
+                for _, row in df.iterrows():
                     first = str(row.get("First Name", "")).strip()
                     last = str(row.get("Last Name", "")).strip()
-                    if not first and not last:
-                        errors.append(f"Row {idx+2}: Missing name")
-                        continue
                     fname = sanitize_filename(f"{first}_{last}") or "contact"
-                    subfolder = row.get("Organization") or row.get("Title") or fname
                     vcard = build_vcard(first, last,
                                         str(row.get("Organization", "")),
                                         str(row.get("Title", "")),
@@ -208,81 +162,51 @@ with tabs[1]:
                                         str(row.get("Email", "")),
                                         str(row.get("Website", "")),
                                         str(row.get("Notes", "")))
-                    zf.writestr(f"{batch_folder}/{subfolder}/{fname}.vcf", vcard_bytes(vcard))
-                    img = make_qr_image(vcard, ec, box, border, as_svg=False, fg_color=fg, bg_color=bg, style=style)
-                    png_buf = io.BytesIO(); img.save(png_buf, format="PNG")
-                    zf.writestr(f"{batch_folder}/{subfolder}/{fname}_qr.png", png_buf.getvalue())
+                    zf.writestr(f"{batch_folder}/{fname}.vcf", vcard_bytes(vcard))
             zip_buf.seek(0)
             st.download_button("Download Batch ZIP", data=zip_buf.getvalue(),
                                file_name=f"{batch_folder}.zip", mime="application/zip")
-            st.success(f"Processed: {len(df)-len(errors)} contacts. Errors: {len(errors)}")
-            if errors: st.error("\n".join(errors))
 
 # --- WhatsApp ---
 with tabs[2]:
     st.header("WhatsApp QR")
-    wa_nums = st.text_input("WhatsApp Number(s), comma-separated (intl format)")
+    wa_num = st.text_input("WhatsApp Number (intl format)")
     wa_msg = st.text_input("Prefilled Message (optional)")
-    if st.button("Generate WhatsApp QR(s)"):
-        numbers = [n.strip() for n in wa_nums.split(",") if n.strip()]
-        if not numbers:
-            st.warning("Please enter at least one number")
-        elif len(numbers) == 1:
-            wa_url = f"https://wa.me/{numbers[0]}"
-            if wa_msg: wa_url += f"?text={quote_plus(wa_msg)}"
-            img = make_qr_image(wa_url, "M (15%)", 10, 4, as_svg=False)
-            buf = io.BytesIO(); img.save(buf, format="PNG")
-            st.image(buf.getvalue(), caption="WhatsApp QR")
-            st.download_button("Download WhatsApp QR", data=buf.getvalue(),
-                               file_name="whatsapp_qr.png", mime="image/png")
-        else:
-            zip_buf = io.BytesIO()
-            with zipfile.ZipFile(zip_buf, "w") as zf:
-                for num in numbers:
-                    wa_url = f"https://wa.me/{num}"
-                    if wa_msg: wa_url += f"?text={quote_plus(wa_msg)}"
-                    img = make_qr_image(wa_url, "M (15%)", 10, 4, as_svg=False)
-                    png_buf = io.BytesIO(); img.save(png_buf, format="PNG")
-                    zf.writestr(f"whatsapp_{num}.png", png_buf.getvalue())
-            zip_buf.seek(0)
-            st.download_button("Download WhatsApp QRs (ZIP)", data=zip_buf.getvalue(),
-                               file_name="whatsapp_qrs.zip", mime="application/zip")
+    if st.button("Generate WhatsApp QR"):
+        wa_url = f"https://wa.me/{wa_num}"
+        if wa_msg: wa_url += f"?text={quote_plus(wa_msg)}"
+        img = make_qr_image(wa_url, "M (15%)", 10, 4, as_svg=False)
+        buf = io.BytesIO(); img.save(buf, format="PNG")
+        st.image(buf.getvalue(), caption="WhatsApp QR")
+        st.download_button("WhatsApp QR (PNG)", data=buf.getvalue(),
+                           file_name="whatsapp_qr.png", mime="image/png")
 
 # --- Email ---
 with tabs[3]:
     st.header("Email QR")
     mail_to = st.text_input("Recipient")
-    mail_cc = st.text_input("CC")
-    mail_bcc = st.text_input("BCC")
     mail_sub = st.text_input("Subject")
     mail_body = st.text_area("Body")
     if st.button("Generate Email QR"):
         params = []
         if mail_sub: params.append("subject=" + quote_plus(mail_sub))
         if mail_body: params.append("body=" + quote_plus(mail_body))
-        if mail_cc: params.append("cc=" + quote_plus(mail_cc))
-        if mail_bcc: params.append("bcc=" + quote_plus(mail_bcc))
         mailto_url = f"mailto:{mail_to}" + (("?" + "&".join(params)) if params else "")
         img = make_qr_image(mailto_url, "M (15%)", 10, 4, as_svg=False)
         buf = io.BytesIO(); img.save(buf, format="PNG")
         st.image(buf.getvalue(), caption="Email QR")
-        st.download_button("Download Email QR", data=buf.getvalue(),
+        st.download_button("Email QR (PNG)", data=buf.getvalue(),
                            file_name="email_qr.png", mime="image/png")
 
 # --- Link ---
 with tabs[4]:
     st.header("Link QR")
     link_url = st.text_input("Enter URL")
-    auto_fix = st.checkbox("Auto-fix scheme (add https:// if missing)", value=True)
-    pretend_shorten = st.checkbox("Prefer short link (encode original link only)", value=False)
     if st.button("Generate Link QR"):
-        url = link_url.strip()
-        if auto_fix: url = normalize_url(url)
-        if pretend_shorten: url = url  # placeholder, same url
-        img = make_qr_image(url, "M (15%)", 10, 4, as_svg=False)
+        img = make_qr_image(link_url, "M (15%)", 10, 4, as_svg=False)
         buf = io.BytesIO(); img.save(buf, format="PNG")
         st.image(buf.getvalue(), caption="Link QR")
-        st.download_button("Download Link QR", data=buf.getvalue(),
+        st.download_button("Link QR (PNG)", data=buf.getvalue(),
                            file_name="link_qr.png", mime="image/png")
 
 # --- Location ---
@@ -290,25 +214,16 @@ with tabs[5]:
     st.header("Location QR")
     lat = st.text_input("Latitude")
     lon = st.text_input("Longitude")
-    place = st.text_input("Place Name (optional)")
-    provider = st.radio("Map Provider", ["Google Maps", "Apple Maps"], index=0)
     if st.button("Generate Location QR"):
-        loc_url = ""
-        if place:
-            loc_url = f"https://www.google.com/maps/search/?api=1&query={quote_plus(place)}"
-        elif lat and lon:
-            if provider == "Google Maps":
-                loc_url = f"https://www.google.com/maps?q={lat},{lon}"
-            else:
-                loc_url = f"http://maps.apple.com/?ll={lat},{lon}"
-        if loc_url:
+        if lat and lon:
+            loc_url = f"https://www.google.com/maps?q={lat},{lon}"
             img = make_qr_image(loc_url, "M (15%)", 10, 4, as_svg=False)
             buf = io.BytesIO(); img.save(buf, format="PNG")
             st.image(buf.getvalue(), caption="Location QR")
-            st.download_button("Download Location QR", data=buf.getvalue(),
+            st.download_button("Location QR (PNG)", data=buf.getvalue(),
                                file_name="location_qr.png", mime="image/png")
         else:
-            st.warning("Please provide coordinates or a place name.")
+            st.warning("Please provide latitude and longitude.")
 
 # =========================
 # Footer
