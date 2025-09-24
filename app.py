@@ -255,5 +255,5 @@ with tabs[1]:
 st.markdown("""
 ---
 <p style="text-align: center; font-size: 0.9em; color:
-#888888;">Developed by Abdulrrahman Alowain | <a href="https://alraedah.sa" target="_blank">Alraedah Finance</a></p>
-""", unsafe_allow_html=True)  
+#888888;">Developed by Abdulrrahman Alowain | <a href="https://x.com/a_owain" target="_blank">Follow Me</a></p>
+""", unsafe_allow_html=True)
