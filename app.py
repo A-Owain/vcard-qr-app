@@ -134,7 +134,7 @@ with tabs[0]:
     st.header("Single vCard Generator")
     first_name = st.text_input("First Name")
     last_name = st.text_input("Last Name")
-    phone = st.text_input("Phone (Work)", "8001249000")
+    phone = st.text_input("Phone (Work)")
     mobile = st.text_input("Mobile", "+966")
     email = st.text_input("Email")
     website = st.text_input("Website")
