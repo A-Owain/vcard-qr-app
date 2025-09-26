@@ -1,7 +1,5 @@
 streamlit
 pandas
 qrcode
-svgwrite
 python-barcode
 openpyxl
-Pillow
