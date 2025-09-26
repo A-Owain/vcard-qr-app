@@ -414,7 +414,7 @@ with tabs[6]:
             unsafe_allow_html=True
         )
 
-    # Downloads below
+    # Downloads
     st.download_button("Download Employee Directory Template", data=generate_employee_template_xlsx(),
                        file_name="Employee_Directory_Template.xlsx",
                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -423,3 +423,21 @@ with tabs[6]:
                        file_name="Batch_QR_Template.xlsx",
                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                        key="tab7_dl2")
+
+    # Contact info
+    st.markdown("---")
+    st.markdown("**For more help, please contact:**")
+    st.write("Abdurrahman Alowain – Marketing Lead")
+    st.write("Email: abdurrahman@company.com")
+    st.write("Phone: +966500000000")
+
+    # Footer
+    st.markdown(
+        """
+        <hr style="margin-top:30px; margin-bottom:10px;">
+        <div style="text-align:center; color:gray; font-size:13px;">
+        © 2025 Alraedah Finance – Internal Tools. All rights reserved.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
