@@ -322,12 +322,35 @@ with tabs[4]:
 # ------------------------------------------------------------
 with tabs[5]:
     st.markdown("### Employee Directory")
-    st.write("Download the template to fill employee data.")
+    st.write("Download the template, fill employee data, then upload it back for processing.")
 
-    st.download_button("Download Employee Directory Template", data=generate_employee_template_xlsx(),
+    # Download template
+    st.download_button("Download Employee Directory Template",
+                       data=generate_employee_template_xlsx(),
                        file_name="Employee_Directory_Template.xlsx",
                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                        key="tab6_dl")
+
+    # Upload filled file
+    uploaded_dir_excel = st.file_uploader("Upload filled Employee Directory Excel", type=["xlsx"], key="tab6_upload")
+
+    # Custom naming input
+    custom_name = st.text_input("Custom name for this directory (optional)", key="tab6_name")
+
+    if uploaded_dir_excel:
+        df = pd.read_excel(uploaded_dir_excel)
+        st.write("Preview of uploaded data:")
+        st.dataframe(df.head())
+
+        # Example: Save processed directory as CSV with custom name
+        filename = f"Employee_Directory_{custom_name or 'Export'}.csv"
+        csv_bytes = df.to_csv(index=False).encode("utf-8")
+
+        st.download_button("Download Processed Directory",
+                           data=csv_bytes,
+                           file_name=filename,
+                           mime="text/csv",
+                           key="tab6_processed")
 
 # ------------------------------------------------------------
 # Tab 7: Templates & Help
