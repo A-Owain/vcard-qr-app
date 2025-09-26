@@ -1,6 +1,6 @@
 streamlit==1.37.1
-qrcode[pil]
+qrcode
 pandas
 pillow
 openpyxl
-python-barcode
+treepoem
