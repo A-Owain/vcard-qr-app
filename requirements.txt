@@ -5,3 +5,4 @@ pillow
 openpyxl
 python-barcode[images]
 pyzbar
+barcode
