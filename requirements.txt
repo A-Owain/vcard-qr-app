@@ -4,4 +4,6 @@ pandas
 pillow
 openpyxl
 python-barcode
+svglib
+reportlab
 pyzbar
