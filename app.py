@@ -425,11 +425,19 @@ with tabs[6]:
                        key="tab7_dl2")
 
     # Contact info
-    st.markdown("---")
-    st.markdown("**For more help, please contact:**")
-    st.write("Abdurrahman Alowain – Product Designer & Developer")
-    st.write("Email: abdurrahmanowain@gmail.com")
-    st.write("LinkedIn: [linkedin.com/in/abdurrahman-alowain](https://www.linkedin.com/in/abdurrahnmanowain/)")
+    st.markdown(
+    """
+    <div style="border:1px solid #ccc; border-radius:8px; padding:15px; margin-top:15px;">
+        <p><b>For more help, please contact:</b></p>
+        <p>Abdurrahman Alowain – Product Designer & Developer</p>
+        <p>
+          <a href="mailto:abdurrahmanowain@gmail.com" target="_blank">Email</a> | 
+          <a href="https://www.linkedin.com/in/abdurrahnmanowain/" target="_blank">LinkedIn</a>
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
     # Footer
     st.markdown(
