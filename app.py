@@ -335,34 +335,54 @@ with tabs[5]:
 with tabs[6]:
     st.markdown("### Templates & Help")
 
-    st.markdown("#### English")
-    st.write("Employee Directory Template:")
-    st.write("- Required: FirstName, LastName, Phone, Email")
-    st.write("- Optional: Position, Department, Company, Website, Location, MapsLink, Notes")
-    st.write("- Includes one sample row for guidance.")
+    col1, col2 = st.columns(2)
 
-    st.write("Batch QR Template:")
-    st.write("- Required: Label, Data")
-    st.write("- Includes one sample row for guidance.")
+    # English section (left)
+    with col1:
+        st.markdown("#### English")
+        st.write("Employee Directory Template:")
+        st.write("- Required: FirstName, LastName, Phone, Email")
+        st.write("- Optional: Position, Department, Company, Website, Location, MapsLink, Notes")
+        st.write("- Includes one sample row for guidance.")
 
-    st.write("Notes:")
-    st.write("- All batch exports include a SUMMARY.txt file.")
-    st.write("- Website and MapsLink are added as separate URL lines in vCards.")
+        st.write("Batch QR Template:")
+        st.write("- Required: Label, Data")
+        st.write("- Includes one sample row for guidance.")
 
-    st.markdown("#### العربية")
-    st.write("قالب دليل الموظفين:")
-    st.write("- الأعمدة المطلوبة: FirstName, LastName, Phone, Email")
-    st.write("- الأعمدة الاختيارية: Position, Department, Company, Website, Location, MapsLink, Notes")
-    st.write("- يحتوي على صف تجريبي للتوضيح.")
+        st.write("Notes:")
+        st.write("- All batch exports include a SUMMARY.txt file.")
+        st.write("- Website and MapsLink are added as separate URL lines in vCards.")
 
-    st.write("قالب الأكواد (Batch QR):")
-    st.write("- الأعمدة المطلوبة: Label, Data")
-    st.write("- يحتوي على صف تجريبي للتوضيح.")
+    # Arabic section (right, RTL)
+    with col2:
+        st.markdown("#### العربية")
+        st.markdown(
+            """
+            <div dir="rtl">
+            <p>قالب دليل الموظفين:</p>
+            <ul>
+              <li>الأعمدة المطلوبة: FirstName, LastName, Phone, Email</li>
+              <li>الأعمدة الاختيارية: Position, Department, Company, Website, Location, MapsLink, Notes</li>
+              <li>يحتوي على صف تجريبي للتوضيح.</li>
+            </ul>
 
-    st.write("ملاحظات:")
-    st.write("- جميع المخرجات تحتوي ملف SUMMARY.txt")
-    st.write("- موقع الشركة (Website) ورابط الخرائط (MapsLink) يتم إضافتهم كسطرين URL في بطاقة vCard.")
+            <p>قالب الأكواد (Batch QR):</p>
+            <ul>
+              <li>الأعمدة المطلوبة: Label, Data</li>
+              <li>يحتوي على صف تجريبي للتوضيح.</li>
+            </ul>
 
+            <p>ملاحظات:</p>
+            <ul>
+              <li>جميع المخرجات تحتوي ملف SUMMARY.txt</li>
+              <li>موقع الشركة (Website) ورابط الخرائط (MapsLink) يتم إضافتهم كسطرين URL في بطاقة vCard.</li>
+            </ul>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # Downloads below both boxes
     st.download_button("Download Employee Directory Template", data=generate_employee_template_xlsx(),
                        file_name="Employee_Directory_Template.xlsx",
                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
