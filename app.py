@@ -6,8 +6,14 @@ import zipfile
 from io import BytesIO
 from datetime import datetime
 from PIL import Image
-import barcode
-from barcode.writer import ImageWriter
+
+# Try importing barcode safely
+try:
+    import barcode
+    from barcode.writer import ImageWriter
+    BARCODE_AVAILABLE = True
+except ImportError:
+    BARCODE_AVAILABLE = False
 
 # App Title
 st.set_page_config(page_title="QR & Barcode Generator", page_icon="🔗", layout="wide")
@@ -128,31 +134,32 @@ with tab3:
 with tab4:
     st.header("🏷 Product Barcode Generator")
 
-    product_text = st.text_input("Enter product code or text:")
-    barcode_type = st.selectbox(
-        "Choose barcode format:",
-        ["code128", "ean13", "upc", "isbn13"]
-    )
+    if not BARCODE_AVAILABLE:
+        st.error("❌ Barcode module not installed. Please check requirements.txt")
+    else:
+        product_text = st.text_input("Enter product code or text:")
+        barcode_type = st.selectbox(
+            "Choose barcode format:",
+            ["code128", "ean13", "upc", "isbn13"]
+        )
 
-    if st.button("Generate Barcode"):
-        if product_text.strip():
-            try:
-                BARCODE_CLASS = barcode.get_barcode_class(barcode_type)
-                buffer = BytesIO()
-                BARCODE_CLASS(product_text, writer=ImageWriter()).write(buffer)
+        if st.button("Generate Barcode"):
+            if product_text.strip():
+                try:
+                    BARCODE_CLASS = barcode.get_barcode_class(barcode_type)
+                    buffer = BytesIO()
+                    BARCODE_CLASS(product_text, writer=ImageWriter()).write(buffer)
+                    buffer.seek(0)
+                    img = Image.open(buffer)
 
-                buffer.seek(0)
-                img = Image.open(buffer)
-
-                st.image(img, caption="Generated Barcode", use_column_width=True)
-
-                st.download_button(
-                    "Download Barcode PNG",
-                    buffer,
-                    file_name=f"barcode_{product_text}.png",
-                    mime="image/png"
-                )
-            except Exception as e:
-                st.error(f"Error: {e}")
-        else:
-            st.warning("Please enter a product code or text.")
+                    st.image(img, caption="Generated Barcode", use_column_width=True)
+                    st.download_button(
+                        "Download Barcode PNG",
+                        buffer,
+                        file_name=f"barcode_{product_text}.png",
+                        mime="image/png"
+                    )
+                except Exception as e:
+                    st.error(f"Error: {e}")
+            else:
+                st.warning("Please enter a product code or text.")
