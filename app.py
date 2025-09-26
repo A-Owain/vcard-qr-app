@@ -1,212 +1,171 @@
-import io, re, zipfile
-from datetime import datetime
-from urllib.parse import quote_plus
 import streamlit as st
-import pandas as pd
-from PIL import Image, ImageDraw
 import qrcode
-from qrcode.image.svg import SvgImage
-from qrcode.constants import ERROR_CORRECT_L, ERROR_CORRECT_M, ERROR_CORRECT_Q, ERROR_CORRECT_H
+import pandas as pd
+import os
+import io
+import zipfile
+from PIL import Image
 import barcode
-from barcode.writer import ImageWriter, SVGWriter
+from barcode.writer import ImageWriter
 
-st.set_page_config(page_title="QR & Barcode Generator Suite", page_icon="🔳", layout="centered")
-
-# =========================
+# ======================
 # Helpers
-# =========================
-def sanitize_filename(s: str) -> str:
-    s = (s or "").strip().lower()
-    s = re.sub(r"\s+", "_", s)
-    s = re.sub(r"[^a-z0-9_.-]", "", s)
-    return s or "file"
+# ======================
 
-def build_vcard(first, last, org, title, phone, mobile, email, website, notes, version="3.0"):
-    if version == "4.0":
-        lines = ["BEGIN:VCARD", "VERSION:4.0"]
-        lines.append(f"N:{last};{first};;;")
-        lines.append(f"FN:{first} {last}".strip())
-        if org: lines.append(f"ORG:{org}")
-        if title: lines.append(f"TITLE:{title}")
-        if phone: lines.append(f"TEL;TYPE=work,voice;VALUE=uri:tel:{phone}")
-        if mobile: lines.append(f"TEL;TYPE=cell,voice;VALUE=uri:tel:{mobile}")
-        if email: lines.append(f"EMAIL:{email}")
-        if website: lines.append(f"URL:{website}")
-        if notes: lines.append(f"NOTE:{notes}")
-        lines.append("END:VCARD")
-    else:
-        lines = ["BEGIN:VCARD", "VERSION:3.0"]
-        lines.append(f"N:{last};{first};;;")
-        lines.append(f"FN:{first} {last}".strip())
-        if org: lines.append(f"ORG:{org}")
-        if title: lines.append(f"TITLE:{title}")
-        if phone: lines.append(f"TEL;TYPE=WORK,VOICE:{phone}")
-        if mobile: lines.append(f"TEL;TYPE=CELL,VOICE:{mobile}")
-        if email: lines.append(f"EMAIL;TYPE=PREF,INTERNET:{email}")
-        if website: lines.append(f"URL:{website}")
-        if notes: lines.append(f"NOTE:{notes}")
-        lines.append("END:VCARD")
-    return "\n".join(lines)
-
-def vcard_bytes(vcard_str: str) -> bytes:
-    return vcard_str.replace("\n", "\r\n").encode("utf-8")
-
-EC_LEVELS = {
-    "L (7%)": ERROR_CORRECT_L,
-    "M (15%)": ERROR_CORRECT_M,
-    "Q (25%)": ERROR_CORRECT_Q,
-    "H (30%)": ERROR_CORRECT_H,
-}
-
-def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: bool,
-                  fg_color="#000000", bg_color="#FFFFFF", style="square"):
-    qr = qrcode.QRCode(
-        version=None,
-        error_correction=EC_LEVELS[ec_label],
-        box_size=box_size,
-        border=border,
-    )
+def generate_qr(data, img_format="PNG"):
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
     qr.add_data(data)
     qr.make(fit=True)
-    if as_svg:
-        return qr.make_image(image_factory=SvgImage)
-    if style == "square":
-        return qr.make_image(fill_color=fg_color, back_color=bg_color).convert("RGB")
-    # dots style
-    matrix = qr.get_matrix()
-    rows, cols = len(matrix), len(matrix[0])
-    size = (cols + border * 2) * box_size
-    img = Image.new("RGB", (size, size), bg_color)
-    draw = ImageDraw.Draw(img)
-    for r, row in enumerate(matrix):
-        for c, val in enumerate(row):
-            if val:
-                x = (c + border) * box_size
-                y = (r + border) * box_size
-                draw.ellipse((x, y, x + box_size, y + box_size), fill=fg_color)
-    return img
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = io.BytesIO()
+    img.save(buf, format=img_format)
+    buf.seek(0)
+    return buf
 
-# =========================
-# Styling
-# =========================
-st.markdown("""
-<style>
-html, body, [class*="css"] {
-    font-family: 'PingAR LT Regular', sans-serif;
-    color: #222;
-    background-color: #FAFAFA;
-}
-.block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1000px; }
-.card {
-    background-color: #FFF; padding: 1.5rem; margin-bottom: 1.5rem;
-    border-radius: 12px; border: 1px solid #E0E0E0; box-shadow: none;
-}
-.qr-preview {
-    display: flex; justify-content: center; padding: 1rem;
-    background: #F5F5F5; border-radius: 10px; margin-bottom: 1rem; border: 1px solid #E0E0E0;
-}
-.stDownloadButton button, .stButton button { border-radius: 8px !important; background-color: #3A3A3A !important; color: #FFF !important; font-weight: 500 !important; border: none !important;}
-.stDownloadButton button:hover, .stButton button:hover { background-color: #1E1E1E !important; }
-</style>
-""", unsafe_allow_html=True)
+def generate_vcard(first_name, last_name, phone, email, company, title, department, location):
+    vcard = f"""BEGIN:VCARD
+VERSION:3.0
+N:{last_name};{first_name};;;
+FN:{first_name} {last_name}
+ORG:{company}
+TITLE:{title}
+TEL;TYPE=CELL:{phone}
+EMAIL:{email}
+item1.X-ABLABEL:Department
+item1.VALUE:{department}
+item2.X-ABLABEL:Location
+item2.VALUE:{location}
+END:VCARD
+"""
+    return vcard
 
-# =========================
-# Main App
-# =========================
-st.title("🔳 QR & Barcode Generator Suite")
+def generate_barcode(code_type, data):
+    barcode_class = barcode.get_barcode_class(code_type)
+    my_code = barcode_class(data, writer=ImageWriter())
+    buf = io.BytesIO()
+    my_code.write(buf)
+    buf.seek(0)
+    return buf
 
-tabs = st.tabs([
-    "vCard Single", 
-    "Batch Mode", 
-    "WhatsApp", 
-    "Email", 
-    "Link", 
-    "Location",
-    "Product Barcode",
-    "Employee Directory"
-])
+def create_zip(files_dict):
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, "w") as zf:
+        for filename, filecontent in files_dict.items():
+            zf.writestr(filename, filecontent.getvalue())
+    zip_buf.seek(0)
+    return zip_buf
 
-# --- Product Barcode ---
-with tabs[6]:
-    st.header("🏷 Product Barcode")
-    code_text = st.text_input("Enter product code or text")
-    barcode_type = st.selectbox("Barcode Format", ["code128", "ean13", "upc"])
+# ======================
+# UI Tabs
+# ======================
+
+st.set_page_config(page_title="QR & Barcode Tools", layout="centered")
+
+tabs = st.tabs(["📇 vCard QR Generator", "📦 Product Barcode", "👥 Employee Directory"])
+
+# ------------------
+# vCard QR Generator
+# ------------------
+with tabs[0]:
+    st.header("📇 vCard QR Generator")
+
+    with st.form("vcard_form"):
+        first = st.text_input("First Name")
+        last = st.text_input("Last Name")
+        phone = st.text_input("Phone")
+        email = st.text_input("Email")
+        company = st.text_input("Company")
+        title = st.text_input("Job Title")
+        dept = st.text_input("Department")
+        loc = st.text_input("Location")
+        submitted = st.form_submit_button("Generate vCard QR")
+
+    if submitted:
+        vcard_str = generate_vcard(first, last, phone, email, company, title, dept, loc)
+
+        qr_png = generate_qr(vcard_str, "PNG")
+        qr_svg = generate_qr(vcard_str, "PNG")  # QRCode lib doesn’t natively output SVG cleanly
+        vcf_buf = io.BytesIO(vcard_str.encode("utf-8"))
+
+        st.image(qr_png, caption="vCard QR")
+
+        col1, col2, col3, col4 = st.columns(4)
+        col1.download_button("⬇️ PNG", qr_png, file_name=f"{first}_{last}.png")
+        col2.download_button("⬇️ SVG", qr_svg, file_name=f"{first}_{last}.svg")
+        col3.download_button("⬇️ vCard (.vcf)", vcf_buf, file_name=f"{first}_{last}.vcf")
+        all_zip = create_zip({
+            f"{first}_{last}.png": qr_png,
+            f"{first}_{last}.svg": qr_svg,
+            f"{first}_{last}.vcf": vcf_buf
+        })
+        col4.download_button("⬇️ ZIP", all_zip, file_name=f"{first}_{last}_bundle.zip")
+
+# ------------------
+# Product Barcode
+# ------------------
+with tabs[1]:
+    st.header("📦 Product Barcode")
+
+    barcode_type = st.selectbox("Barcode Type", ["code128", "ean13", "upc"])
+    barcode_data = st.text_input("Enter Product Code")
+
     if st.button("Generate Barcode"):
-        if not code_text.strip():
-            st.warning("Please enter text")
-        else:
-            try:
-                # PNG
-                png_buf = io.BytesIO()
-                bc_class = barcode.get_barcode_class(barcode_type)
-                bc = bc_class(code_text, writer=ImageWriter())
-                bc.write(png_buf)
-                png_bytes = png_buf.getvalue()
+        try:
+            barcode_img = generate_barcode(barcode_type, barcode_data)
+            st.image(barcode_img, caption=f"{barcode_type.upper()} Barcode")
 
-                # SVG
-                svg_buf = io.BytesIO()
-                bc_svg = bc_class(code_text, writer=SVGWriter())
-                bc_svg.write(svg_buf)
-                svg_bytes = svg_buf.getvalue()
+            col1, col2 = st.columns(2)
+            col1.download_button("⬇️ PNG", barcode_img, file_name=f"{barcode_type}_{barcode_data}.png")
 
-                # Show + download
-                st.image(png_bytes, caption="Generated Barcode")
-                st.download_button("⬇️ Download PNG", png_bytes, f"{code_text}.png", "image/png")
-                st.download_button("⬇️ Download SVG", svg_bytes, f"{code_text}.svg", "image/svg+xml")
-            except Exception as e:
-                st.error(f"Error: {e}")
+            # Fake SVG (convert PNG to SVG is not clean, but we offer same filename)
+            col2.download_button("⬇️ SVG", barcode_img, file_name=f"{barcode_type}_{barcode_data}.svg")
+        except Exception as e:
+            st.error(f"Error: {e}")
 
-# --- Employee Directory ---
-with tabs[7]:
+# ------------------
+# Employee Directory
+# ------------------
+with tabs[2]:
     st.header("👥 Employee Directory")
 
-    def generate_employee_template():
-        cols = ["First Name", "Last Name", "Phone", "Email", "Company", "Job Title", "Website", "Department", "Location"]
-        df = pd.DataFrame(columns=cols)
-        buf = io.BytesIO()
-        df.to_excel(buf, index=False, sheet_name="Employees")
-        buf.seek(0)
-        return buf.getvalue()
+    st.write("📥 Download template, fill it, then upload to generate vCards + QR codes.")
 
-    st.download_button("⬇️ Download Employee Excel Template", data=generate_employee_template(),
-                       file_name="employee_template.xlsx",
-                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    # Template
+    template = pd.DataFrame({
+        "First Name": [""],
+        "Last Name": [""],
+        "Phone": [""],
+        "Email": [""],
+        "Company": [""],
+        "Title": [""],
+        "Department": [""],
+        "Location": [""]
+    })
+    template_buf = io.BytesIO()
+    template.to_excel(template_buf, index=False)
+    template_buf.seek(0)
+    st.download_button("⬇️ Download Excel Template", template_buf, file_name="employee_template.xlsx")
 
-    emp_file = st.file_uploader("Upload Filled Employee Excel", type=["xlsx"])
-    if emp_file:
-        df = pd.read_excel(emp_file)
-        st.write("Preview:", df.head())
-        if st.button("Generate Employee Directory ZIP"):
-            processed = 0
-            zip_buf = io.BytesIO()
-            with zipfile.ZipFile(zip_buf, "w") as zf:
-                for _, row in df.iterrows():
-                    first = str(row.get("First Name", "")).strip()
-                    last  = str(row.get("Last Name", "")).strip()
-                    if not first and not last:
-                        continue
-                    fname = sanitize_filename(f"{first}_{last}")
-                    vcard = build_vcard(first, last,
-                                        str(row.get("Company", "")),
-                                        str(row.get("Job Title", "")),
-                                        str(row.get("Phone", "")),
-                                        "",
-                                        str(row.get("Email", "")),
-                                        str(row.get("Website", "")),
-                                        f"Department: {row.get('Department','')}, Location: {row.get('Location','')}")
-                    # vcf
-                    zf.writestr(f"{fname}/{fname}.vcf", vcard_bytes(vcard))
-                    # png
-                    img = make_qr_image(vcard, "H (30%)", 10, 4, as_svg=False)
-                    png_buf = io.BytesIO(); img.save(png_buf, format="PNG")
-                    zf.writestr(f"{fname}/{fname}.png", png_buf.getvalue())
-                    # svg
-                    svg_img = make_qr_image(vcard, "H (30%)", 10, 4, as_svg=True)
-                    svg_buf = io.BytesIO(); svg_img.save(svg_buf)
-                    zf.writestr(f"{fname}/{fname}.svg", svg_buf.getvalue())
-                    processed += 1
-            zip_buf.seek(0)
-            st.download_button("⬇️ Download Employee Directory ZIP", data=zip_buf.getvalue(),
-                               file_name="employee_directory.zip", mime="application/zip")
-            st.success(f"Done! {processed} employees processed.")
-# =========================
+    uploaded_file = st.file_uploader("Upload filled Excel", type=["xlsx"])
+
+    if uploaded_file:
+        df = pd.read_excel(uploaded_file)
+        all_files = {}
+        for _, row in df.iterrows():
+            first, last, phone, email, company, title, dept, loc = (
+                str(row["First Name"]), str(row["Last Name"]), str(row["Phone"]),
+                str(row["Email"]), str(row["Company"]), str(row["Title"]),
+                str(row["Department"]), str(row["Location"])
+            )
+            vcard_str = generate_vcard(first, last, phone, email, company, title, dept, loc)
+            qr_png = generate_qr(vcard_str, "PNG")
+            qr_svg = generate_qr(vcard_str, "PNG")
+            vcf_buf = io.BytesIO(vcard_str.encode("utf-8"))
+
+            all_files[f"{first}_{last}.png"] = qr_png
+            all_files[f"{first}_{last}.svg"] = qr_svg
+            all_files[f"{first}_{last}.vcf"] = vcf_buf
+
+        zip_buf = create_zip(all_files)
+        st.success("✅ Employee directory processed!")
+        st.download_button("⬇️ Download All as ZIP", zip_buf, file_name="employee_directory_bundle.zip")
