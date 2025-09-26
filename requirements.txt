@@ -1,6 +1,7 @@
-streamlit==1.37.1
-qrcode[pil]
+streamlit
 pandas
-pillow
-openpyxl
+qrcode
+svgwrite
 python-barcode
+openpyxl
+Pillow
