@@ -73,13 +73,13 @@ tabs = st.tabs([
 # ----------------------------
 with tabs[0]:
     st.header("QR Code Generator")
-    data = st.text_input("Enter data/text for QR code")
-    fmt = st.radio("Select format", ["PNG", "SVG"])
-    if st.button("Generate QR"):
+    data = st.text_input("Enter data/text for QR code", key="qr_input")
+    fmt = st.radio("Select format", ["PNG", "SVG"], key="qr_fmt")
+    if st.button("Generate QR", key="qr_btn"):
         if data:
             buf, mime = save_qr_to_bytes(data, fmt)
             st.image(buf, caption="Generated QR Code")
-            st.download_button("Download", buf, file_name=f"qr_code.{fmt.lower()}", mime=mime)
+            st.download_button("Download", buf, file_name=f"qr_code.{fmt.lower()}", mime=mime, key="qr_download")
         else:
             st.warning("Please enter some data.")
 
@@ -88,7 +88,7 @@ with tabs[0]:
 # ----------------------------
 with tabs[1]:
     st.header("Batch QR Generator")
-    uploaded_file = st.file_uploader("Upload CSV/Excel with a 'Data' column", type=["csv", "xlsx"])
+    uploaded_file = st.file_uploader("Upload CSV/Excel with a 'Data' column", type=["csv", "xlsx"], key="batch_upload")
     fmt = st.radio("Select format", ["PNG", "SVG"], key="batch_fmt")
     if uploaded_file:
         if uploaded_file.name.endswith(".csv"):
@@ -103,7 +103,7 @@ with tabs[1]:
                 buf, _ = save_qr_to_bytes(content, fmt)
                 files[f"{content}.{fmt.lower()}"] = buf
             zip_buf = zip_files(files)
-            st.download_button("Download All as ZIP", zip_buf, "batch_qr_codes.zip", "application/zip")
+            st.download_button("Download All as ZIP", zip_buf, "batch_qr_codes.zip", "application/zip", key="batch_zip")
         else:
             st.error("Uploaded file must contain a 'Data' column.")
 
@@ -114,29 +114,29 @@ with tabs[2]:
     st.header("vCard QR Generator")
     col1, col2 = st.columns(2)
     with col1:
-        first_name = st.text_input("First Name")
-        last_name = st.text_input("Last Name")
-        phone = st.text_input("Phone")
+        first_name = st.text_input("First Name", key="v_first")
+        last_name = st.text_input("Last Name", key="v_last")
+        phone = st.text_input("Phone", key="v_phone")
     with col2:
-        email = st.text_input("Email")
-        company = st.text_input("Company")
-        job = st.text_input("Job Title")
+        email = st.text_input("Email", key="v_email")
+        company = st.text_input("Company", key="v_company")
+        job = st.text_input("Job Title", key="v_job")
 
-    fmt = st.radio("Select format", ["PNG", "SVG"])
-    if st.button("Generate vCard QR"):
+    fmt = st.radio("Select format", ["PNG", "SVG"], key="vcard_fmt")
+    if st.button("Generate vCard QR", key="vcard_btn"):
         (buf, mime), vcard = save_vcard_qr(first_name, last_name, phone, email, company, job, fmt)
         st.image(buf, caption="vCard QR Code")
-        st.download_button(f"Download vCard QR ({fmt})", buf, file_name=f"vcard_qr.{fmt.lower()}", mime=mime)
-        st.download_button("Download .vcf file", vcard, file_name="contact.vcf", mime="text/vcard")
+        st.download_button(f"Download vCard QR ({fmt})", buf, file_name=f"vcard_qr.{fmt.lower()}", mime=mime, key="vcard_download_qr")
+        st.download_button("Download .vcf file", vcard, file_name="contact.vcf", mime="text/vcard", key="vcard_download_vcf")
 
 # ----------------------------
 # Tab 4 - Product Barcode
 # ----------------------------
 with tabs[3]:
     st.header("Product Barcode Generator")
-    data = st.text_input("Enter product code/value")
-    barcode_type = st.selectbox("Barcode Type", ["code128", "ean13", "upc"])
-    if st.button("Generate Barcode"):
+    data = st.text_input("Enter product code/value", key="barcode_input")
+    barcode_type = st.selectbox("Barcode Type", ["code128", "ean13", "upc"], key="barcode_type")
+    if st.button("Generate Barcode", key="barcode_btn"):
         if data:
             try:
                 BARCODE = barcode.get_barcode_class(barcode_type)
@@ -144,7 +144,7 @@ with tabs[3]:
                 BARCODE(data, writer=ImageWriter()).write(buf)
                 buf.seek(0)
                 st.image(buf, caption=f"{barcode_type.upper()} Barcode")
-                st.download_button("Download Barcode (PNG)", buf, file_name=f"barcode_{barcode_type}.png", mime="image/png")
+                st.download_button("Download Barcode (PNG)", buf, file_name=f"barcode_{barcode_type}.png", mime="image/png", key="barcode_download")
             except Exception as e:
                 st.error(f"Error: {e}")
         else:
@@ -158,7 +158,7 @@ with tabs[4]:
     st.write("Upload Excel with employee details to generate vCard QR codes.")
 
     # Downloadable template
-    if st.button("Download Excel Template"):
+    if st.button("Download Excel Template", key="template_btn"):
         template = pd.DataFrame([{
             "First Name": "",
             "Last Name": "",
@@ -172,9 +172,9 @@ with tabs[4]:
         buf = io.BytesIO()
         template.to_excel(buf, index=False)
         buf.seek(0)
-        st.download_button("Download Template", buf, "employee_template.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.download_button("Download Template", buf, "employee_template.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="template_download")
 
-    uploaded_file = st.file_uploader("Upload Employee Excel", type=["xlsx"])
+    uploaded_file = st.file_uploader("Upload Employee Excel", type=["xlsx"], key="employee_upload")
     if uploaded_file:
         df = pd.read_excel(uploaded_file)
         required_cols = ["First Name", "Last Name", "Phone", "Email", "Company", "Job Title", "Department", "Location"]
@@ -190,6 +190,6 @@ with tabs[4]:
                 files[f"{name}.png"] = buf
                 files[f"{name}.vcf"] = io.BytesIO(vcard.encode("utf-8"))
             zip_buf = zip_files(files)
-            st.download_button("Download All Employee Files (ZIP)", zip_buf, "employee_qrcards.zip", "application/zip")
+            st.download_button("Download All Employee Files (ZIP)", zip_buf, "employee_qrcards.zip", "application/zip", key="employee_zip")
         else:
             st.error(f"Excel must include: {', '.join(required_cols)}")
