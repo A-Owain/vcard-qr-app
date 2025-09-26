@@ -222,7 +222,7 @@ with tabs[2]:
     ec = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3, key="wa_ec")
     box = st.slider("Box Size", 4, 20, 10, key="wa_box")
     border = st.slider("Border", 2, 10, 4, key="wa_border")
-    fg = st.color_picker("Foreground", "#25D366", key="wa_fg")
+    fg = st.color_picker("Foreground", "#000000", key="wa_fg")
     bg = st.color_picker("Background", "#FFFFFF", key="wa_bg")
     style = st.radio("QR Style", ["square", "dots"], index=0, key="wa_style")
     if st.button("Generate WhatsApp QR"):
@@ -238,7 +238,7 @@ with tabs[3]:
     ec = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3, key="em_ec")
     box = st.slider("Box Size", 4, 20, 10, key="em_box")
     border = st.slider("Border", 2, 10, 4, key="em_border")
-    fg = st.color_picker("Foreground", "#0000FF", key="em_fg")
+    fg = st.color_picker("Foreground", "#000000", key="em_fg")
     bg = st.color_picker("Background", "#FFFFFF", key="em_bg")
     style = st.radio("QR Style", ["square", "dots"], index=0, key="em_style")
     if st.button("Generate Email QR"):
@@ -266,7 +266,7 @@ with tabs[5]:
     ec = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3, key="loc_ec")
     box = st.slider("Box Size", 4, 20, 10, key="loc_box")
     border = st.slider("Border", 2, 10, 4, key="loc_border")
-    fg = st.color_picker("Foreground", "#FF0000", key="loc_fg")
+    fg = st.color_picker("Foreground", "#000000", key="loc_fg")
     bg = st.color_picker("Background", "#FFFFFF", key="loc_bg")
     style = st.radio("QR Style", ["square", "dots"], index=0, key="loc_style")
     if st.button("Generate Location QR"):
