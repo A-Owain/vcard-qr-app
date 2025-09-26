@@ -3,4 +3,4 @@ qrcode
 pandas
 pillow
 openpyxl
-treepoem
+python-barcode
