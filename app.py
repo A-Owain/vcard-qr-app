@@ -337,52 +337,61 @@ with tabs[6]:
 
     col1, col2 = st.columns(2)
 
-    # English section (left)
+    # English section (left, bordered box)
     with col1:
-        st.markdown("#### English")
-        st.write("Employee Directory Template:")
-        st.write("- Required: FirstName, LastName, Phone, Email")
-        st.write("- Optional: Position, Department, Company, Website, Location, MapsLink, Notes")
-        st.write("- Includes one sample row for guidance.")
-
-        st.write("Batch QR Template:")
-        st.write("- Required: Label, Data")
-        st.write("- Includes one sample row for guidance.")
-
-        st.write("Notes:")
-        st.write("- All batch exports include a SUMMARY.txt file.")
-        st.write("- Website and MapsLink are added as separate URL lines in vCards.")
-
-    # Arabic section (right, RTL)
-    with col2:
-        st.markdown("#### العربية")
         st.markdown(
             """
-            <div dir="rtl">
-            <p>قالب دليل الموظفين:</p>
-            <ul>
-              <li>الأعمدة المطلوبة: FirstName, LastName, Phone, Email</li>
-              <li>الأعمدة الاختيارية: Position, Department, Company, Website, Location, MapsLink, Notes</li>
-              <li>يحتوي على صف تجريبي للتوضيح.</li>
-            </ul>
-
-            <p>قالب الأكواد (Batch QR):</p>
-            <ul>
-              <li>الأعمدة المطلوبة: Label, Data</li>
-              <li>يحتوي على صف تجريبي للتوضيح.</li>
-            </ul>
-
-            <p>ملاحظات:</p>
-            <ul>
-              <li>جميع المخرجات تحتوي ملف SUMMARY.txt</li>
-              <li>موقع الشركة (Website) ورابط الخرائط (MapsLink) يتم إضافتهم كسطرين URL في بطاقة vCard.</li>
-            </ul>
+            <div style="border:1px solid #ccc; border-radius:8px; padding:15px; margin-bottom:10px;">
+                <h4>English</h4>
+                <p><b>Employee Directory Template:</b></p>
+                <ul>
+                  <li>Required: FirstName, LastName, Phone, Email</li>
+                  <li>Optional: Position, Department, Company, Website, Location, MapsLink, Notes</li>
+                  <li>Includes one sample row for guidance.</li>
+                </ul>
+                <p><b>Batch QR Template:</b></p>
+                <ul>
+                  <li>Required: Label, Data</li>
+                  <li>Includes one sample row for guidance.</li>
+                </ul>
+                <p><b>Notes:</b></p>
+                <ul>
+                  <li>All batch exports include a SUMMARY.txt file.</li>
+                  <li>Website and MapsLink are added as separate URL lines in vCards.</li>
+                </ul>
             </div>
             """,
             unsafe_allow_html=True
         )
 
-    # Downloads below both boxes
+    # Arabic section (right, bordered box with RTL)
+    with col2:
+        st.markdown(
+            """
+            <div style="border:1px solid #ccc; border-radius:8px; padding:15px; margin-bottom:10px;" dir="rtl">
+                <h4>العربية</h4>
+                <p><b>قالب دليل الموظفين:</b></p>
+                <ul>
+                  <li>الأعمدة المطلوبة: FirstName, LastName, Phone, Email</li>
+                  <li>الأعمدة الاختيارية: Position, Department, Company, Website, Location, MapsLink, Notes</li>
+                  <li>يحتوي على صف تجريبي للتوضيح.</li>
+                </ul>
+                <p><b>قالب الأكواد (Batch QR):</b></p>
+                <ul>
+                  <li>الأعمدة المطلوبة: Label, Data</li>
+                  <li>يحتوي على صف تجريبي للتوضيح.</li>
+                </ul>
+                <p><b>ملاحظات:</b></p>
+                <ul>
+                  <li>جميع المخرجات تحتوي ملف SUMMARY.txt</li>
+                  <li>موقع الشركة (Website) ورابط الخرائط (MapsLink) يتم إضافتهم كسطرين URL في بطاقة vCard.</li>
+                </ul>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # Downloads below
     st.download_button("Download Employee Directory Template", data=generate_employee_template_xlsx(),
                        file_name="Employee_Directory_Template.xlsx",
                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
