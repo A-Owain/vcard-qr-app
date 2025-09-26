@@ -1,3 +1,9 @@
+# ============================================================
+# 📇 QR, Barcodes & Employee Directory App
+# Streamlit app for generating vCards, QR Codes, Barcodes,
+# Batch exports with SUMMARY file, and Employee Excel templates
+# ============================================================
+
 import streamlit as st
 import pandas as pd
 import os
@@ -8,10 +14,16 @@ import qrcode.image.svg
 from barcode import Code128, EAN13
 from barcode.writer import ImageWriter
 
-# -------------------------
-# vCard generator
-# -------------------------
+
+# ============================================================
+# vCard Generator Function
+# ============================================================
 def create_vcard(employee):
+    """
+    Create a vCard string from employee dictionary.
+    Includes dual URL (Website + MapsLink).
+    """
+
     vcard = [
         "BEGIN:VCARD",
         "VERSION:3.0",
@@ -21,40 +33,54 @@ def create_vcard(employee):
         f"TITLE:{employee.get('Position','')}",
     ]
 
+    # Phone number
     if employee.get("Phone"):
         vcard.append(f"TEL;TYPE=CELL,VOICE:{employee['Phone']}")
 
+    # Email address
     if employee.get("Email"):
         vcard.append(f"EMAIL;TYPE=PREF,INTERNET:{employee['Email']}")
 
+    # Department (optional)
     if employee.get("Department"):
         vcard.append(f"NOTE:Department - {employee['Department']}")
 
+    # Physical location (address)
     if employee.get("Location"):
         vcard.append(f"ADR;TYPE=WORK:;;{employee['Location']}")
 
+    # Website (optional)
     if employee.get("Website"):
         vcard.append(f"URL:{employee['Website']}")
 
+    # Maps link (optional, second URL)
     if employee.get("MapsLink"):
         vcard.append(f"URL:{employee['MapsLink']}")
 
+    # Notes (optional)
     if employee.get("Notes"):
         vcard.append(f"NOTE:{employee['Notes']}")
 
     vcard.append("END:VCARD")
     return "\n".join(vcard)
 
-# -------------------------
-# Excel template generator
-# -------------------------
+
+# ============================================================
+# Excel Template Generator
+# ============================================================
 def generate_employee_template():
+    """
+    Generate an Excel template with required and optional fields.
+    Includes one sample row (Abdurrahman Alowain).
+    """
+
     columns = [
         "FirstName", "LastName", "Position", "Department",
         "Phone", "Email", "Company", "Website",
         "Location", "MapsLink", "Notes"
     ]
 
+    # Example row
     sample_data = [{
         "FirstName": "Abdurrahman",
         "LastName": "Alowain",
@@ -70,40 +96,52 @@ def generate_employee_template():
     }]
 
     df = pd.DataFrame(sample_data, columns=columns)
+
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name="Employees")
+
     return output.getvalue()
 
-# -------------------------
-# Batch QR export
-# -------------------------
+
+# ============================================================
+# Batch QR Export Function
+# ============================================================
 def export_batch_qr(employees, output_dir, custom_folder=None):
+    """
+    Export batch QR codes and vCards for all employees in DataFrame.
+    Creates one folder per employee and a SUMMARY.txt file.
+    """
+
     today_folder = f"Batch_QR_vCards_{pd.Timestamp.today().strftime('%Y%m%d')}"
     if custom_folder:
         today_folder = f"{today_folder}_{custom_folder}"
+
     batch_path = os.path.join(output_dir, today_folder)
     os.makedirs(batch_path, exist_ok=True)
 
     count = 0
+
     for _, employee in employees.iterrows():
+        # Folder name = First_Last
         first = str(employee.get("FirstName", "")).strip()
         last = str(employee.get("LastName", "")).strip()
         folder_name = f"{first}_{last}".replace(" ", "_") or "Employee"
+
         emp_path = os.path.join(batch_path, folder_name)
         os.makedirs(emp_path, exist_ok=True)
 
-        # vCard
+        # --- vCard file ---
         vcard_content = create_vcard(employee)
         vcf_path = os.path.join(emp_path, f"{folder_name}.vcf")
         with open(vcf_path, "w", encoding="utf-8") as f:
             f.write(vcard_content)
 
-        # QR PNG
+        # --- QR Code (PNG) ---
         qr = qrcode.make(vcard_content)
         qr.save(os.path.join(emp_path, f"{folder_name}.png"))
 
-        # QR SVG (using built-in qrcode factory)
+        # --- QR Code (SVG, built-in factory) ---
         factory = qrcode.image.svg.SvgImage
         svg_img = qrcode.make(vcard_content, image_factory=factory)
         svg_path = os.path.join(emp_path, f"{folder_name}.svg")
@@ -112,7 +150,7 @@ def export_batch_qr(employees, output_dir, custom_folder=None):
 
         count += 1
 
-    # Summary file
+    # --- Create SUMMARY.txt ---
     summary = (
         f"Batch QR & vCards Export\n"
         f"Date: {pd.Timestamp.today().strftime('%Y-%m-%d %H:%M')}\n"
@@ -123,49 +161,69 @@ def export_batch_qr(employees, output_dir, custom_folder=None):
         f"- .png (QR Code)\n"
         f"- .svg (QR Code)\n"
     )
+
     with open(os.path.join(batch_path, "SUMMARY.txt"), "w", encoding="utf-8") as f:
         f.write(summary)
 
     return batch_path, summary
 
-# -------------------------
-# ZIP utility
-# -------------------------
+
+# ============================================================
+# ZIP Utility
+# ============================================================
 def zip_directory(folder_path):
+    """
+    Compress a directory into an in-memory ZIP file.
+    """
     zip_buffer = io.BytesIO()
+
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in os.walk(folder_path):
             for file in files:
                 file_path = os.path.join(root, file)
                 arcname = os.path.relpath(file_path, folder_path)
                 zipf.write(file_path, arcname)
+
     zip_buffer.seek(0)
     return zip_buffer
 
-# -------------------------
-# Barcode generator
-# -------------------------
+
+# ============================================================
+# Barcode Generator
+# ============================================================
 def generate_barcode(data, barcode_type="Code128"):
+    """
+    Generate a barcode (Code128 or EAN13).
+    Returns in-memory PNG buffer.
+    """
     buffer = io.BytesIO()
+
     if barcode_type == "Code128":
         Code128(data, writer=ImageWriter()).write(buffer)
     elif barcode_type == "EAN13":
         data = str(data).zfill(12)  # EAN13 requires 12 digits
         EAN13(data, writer=ImageWriter()).write(buffer)
+
     buffer.seek(0)
     return buffer
 
-# -------------------------
+
+# ============================================================
 # Streamlit UI
-# -------------------------
+# ============================================================
 st.set_page_config(page_title="QR & Employee Directory App", layout="wide")
 st.title("📇 QR, Barcodes & Employee Directory App")
 
 tabs = st.tabs(["Single vCard", "Batch vCards", "Barcodes", "Employee Directory"])
 
-# --- Single vCard ---
+
+# ============================================================
+# Tab 1: Single vCard
+# ============================================================
 with tabs[0]:
     st.subheader("Generate a Single vCard")
+
+    # Inputs
     first = st.text_input("First Name")
     last = st.text_input("Last Name")
     company = st.text_input("Company")
@@ -178,6 +236,7 @@ with tabs[0]:
     mapslink = st.text_input("Google Maps Link (optional)")
     notes = st.text_area("Notes")
 
+    # Action
     if st.button("Generate vCard"):
         emp = {
             "FirstName": first, "LastName": last,
@@ -187,8 +246,10 @@ with tabs[0]:
             "Website": website, "Location": location,
             "MapsLink": mapslink, "Notes": notes
         }
+
         vcard_content = create_vcard(emp)
 
+        # Download button
         st.download_button(
             "📥 Download vCard (.vcf)",
             data=vcard_content,
@@ -196,36 +257,46 @@ with tabs[0]:
             mime="text/vcard"
         )
 
+        # Show QR
         qr = qrcode.make(vcard_content)
         st.image(qr, caption="vCard QR Code")
 
-# --- Batch vCards ---
+
+# ============================================================
+# Tab 2: Batch vCards
+# ============================================================
 with tabs[1]:
     st.subheader("Generate Batch vCards from Excel")
+
     uploaded_excel = st.file_uploader("Upload Employee Excel File", type=["xlsx"])
     custom_folder = st.text_input("Optional: Custom folder name for this batch")
 
     employees = None
     required_cols = ["FirstName", "LastName", "Phone", "Email"]
 
+    # Preview uploaded file
     if uploaded_excel:
         employees = pd.read_excel(uploaded_excel)
         st.success("✅ File uploaded. Preview below:")
         st.dataframe(employees.head(), use_container_width=True)
 
+        # Validate required columns
         missing_cols = [col for col in required_cols if col not in employees.columns]
         if missing_cols:
             st.error(f"⚠️ Missing required columns: {', '.join(missing_cols)}")
             employees = None
 
+    # Action
     if st.button("🚀 Generate Batch QR Codes"):
         if employees is not None:
             batch_folder, summary = export_batch_qr(employees, output_dir=".", custom_folder=custom_folder)
             zip_buffer = zip_directory(batch_folder)
 
+            # Show summary
             st.success("✅ Batch generation completed!")
             st.text_area("📋 Summary", summary, height=180)
 
+            # Download button
             st.download_button(
                 label="📥 Download Batch QR Package (ZIP)",
                 data=zip_buffer,
@@ -235,9 +306,13 @@ with tabs[1]:
         else:
             st.warning("⚠️ Please upload a valid employee Excel file first (with required columns).")
 
-# --- Barcodes ---
+
+# ============================================================
+# Tab 3: Barcodes
+# ============================================================
 with tabs[2]:
     st.subheader("Generate Barcodes")
+
     data = st.text_input("Enter data for barcode")
     barcode_type = st.selectbox("Select barcode type", ["Code128", "EAN13"])
 
@@ -245,6 +320,7 @@ with tabs[2]:
         if data:
             buffer = generate_barcode(data, barcode_type)
             st.image(buffer, caption=f"{barcode_type} Barcode")
+
             st.download_button(
                 "📥 Download Barcode (PNG)",
                 data=buffer,
@@ -254,7 +330,10 @@ with tabs[2]:
         else:
             st.warning("⚠️ Please enter data for the barcode.")
 
-# --- Employee Directory ---
+
+# ============================================================
+# Tab 4: Employee Directory
+# ============================================================
 with tabs[3]:
     st.subheader("Employee Directory Tools")
 
@@ -278,6 +357,7 @@ with tabs[3]:
     You can **delete or overwrite it** when adding your own employees.
     """)
 
+    # Preview sample row
     sample_df = pd.DataFrame([{
         "FirstName": "Abdurrahman",
         "LastName": "Alowain",
@@ -295,6 +375,7 @@ with tabs[3]:
     st.write("👀 Preview of the sample row in the template:")
     st.dataframe(sample_df, use_container_width=True)
 
+    # Download template
     st.download_button(
         label="📥 Download Employee Excel Template",
         data=generate_employee_template(),
