@@ -3,5 +3,5 @@ qrcode[pil]
 pandas
 pillow
 openpyxl
-python-barcode[images]
+python-barcode
 pyzbar
