@@ -429,7 +429,7 @@ with tabs[6]:
     st.markdown("**For more help, please contact:**")
     st.write("Abdurrahman Alowain – Product Designer & Developer")
     st.write("Email: abdurrahmanowain@gmail.com")
-    st.write("LinkedIn: [linkedin.com/in/abdurrahman-alowain](https://www.linkedin.com/in/abdurrahman-alowain)")
+    st.write("LinkedIn: [linkedin.com/in/abdurrahman-alowain](https://www.linkedin.com/in/abdurrahnmanowain/)")
 
     # Footer
     st.markdown(
