@@ -93,13 +93,30 @@ def make_qr_image(data: str, ec_label: str, box_size: int, border: int, as_svg: 
     return img
 
 def zip_files(file_dict):
-    """Takes a dict {filename: bytes} and returns zip bytes"""
     zip_buf = io.BytesIO()
     with zipfile.ZipFile(zip_buf, "w") as zf:
         for fname, content in file_dict.items():
             zf.writestr(fname, content)
     zip_buf.seek(0)
     return zip_buf.getvalue()
+
+def show_qr_result(data, fname, ec, box, border, fg, bg, style):
+    files = {}
+    # PNG
+    img = make_qr_image(data, ec, box, border, as_svg=False, fg_color=fg, bg_color=bg, style=style)
+    png_buf = io.BytesIO(); img.save(png_buf, format="PNG")
+    files[f"{fname}.png"] = png_buf.getvalue()
+    st.image(png_buf.getvalue(), caption="QR Code")
+    st.download_button("⬇️ Download PNG", png_buf.getvalue(), f"{fname}.png", "image/png")
+
+    # SVG
+    svg_img = make_qr_image(data, ec, box, border, as_svg=True, fg_color=fg, bg_color=bg, style=style)
+    svg_buf = io.BytesIO(); svg_img.save(svg_buf)
+    files[f"{fname}.svg"] = svg_buf.getvalue()
+    st.download_button("⬇️ Download SVG", svg_buf.getvalue(), f"{fname}.svg", "image/svg+xml")
+
+    # ZIP
+    st.download_button("⬇️ Download All (ZIP)", zip_files(files), f"{fname}_qr.zip", "application/zip")
 
 # =========================
 # UI
@@ -133,27 +150,14 @@ with tabs[0]:
         vcard = build_vcard(first, last, org, title, phone, mobile, email, website, notes, version)
         fname = sanitize_filename(f"{first}_{last}")
         files = {}
-
         # VCF
         vcf_bytes = vcard_bytes(vcard)
         files[f"{fname}.vcf"] = vcf_bytes
         st.download_button("⬇️ Download vCard (.vcf)", vcf_bytes, f"{fname}.vcf", mime="text/vcard")
-
-        # PNG QR
-        img = make_qr_image(vcard, ec, box, border, as_svg=False, fg_color=fg, bg_color=bg, style=style)
-        png_buf = io.BytesIO(); img.save(png_buf, format="PNG")
-        files[f"{fname}.png"] = png_buf.getvalue()
-        st.image(png_buf.getvalue(), caption="QR Code")
-        st.download_button("⬇️ Download QR PNG", png_buf.getvalue(), f"{fname}.png", "image/png")
-
-        # SVG QR
-        svg_img = make_qr_image(vcard, ec, box, border, as_svg=True, fg_color=fg, bg_color=bg, style=style)
-        svg_buf = io.BytesIO(); svg_img.save(svg_buf)
-        files[f"{fname}.svg"] = svg_buf.getvalue()
-        st.download_button("⬇️ Download QR SVG", svg_buf.getvalue(), f"{fname}.svg", "image/svg+xml")
-
-        # ZIP
-        st.download_button("⬇️ Download All (ZIP)", zip_files(files), f"{fname}_files.zip", "application/zip")
+        # QR
+        show_qr_result(vcard, fname, ec, box, border, fg, bg, style)
+        # Add vcf to ZIP
+        st.download_button("⬇️ Download All (ZIP incl. VCF)", zip_files(files), f"{fname}_all.zip", "application/zip")
 
 # --- Batch Mode ---
 with tabs[1]:
@@ -197,13 +201,12 @@ with tabs[1]:
                                         str(row.get("Email", "")),
                                         str(row.get("Website", "")),
                                         str(row.get("Notes", "")))
-                    # Save vcf
                     zf.writestr(f"{name_stub}/{name_stub}.vcf", vcard_bytes(vcard))
-                    # Save png
+                    # png
                     img = make_qr_image(vcard, ec, box, border, as_svg=False, fg_color=fg, bg_color=bg, style=style)
                     png_buf = io.BytesIO(); img.save(png_buf, format="PNG")
                     zf.writestr(f"{name_stub}/{name_stub}.png", png_buf.getvalue())
-                    # Save svg
+                    # svg
                     svg_img = make_qr_image(vcard, ec, box, border, as_svg=True, fg_color=fg, bg_color=bg, style=style)
                     svg_buf = io.BytesIO(); svg_img.save(svg_buf)
                     zf.writestr(f"{name_stub}/{name_stub}.svg", svg_buf.getvalue())
@@ -211,8 +214,67 @@ with tabs[1]:
             st.download_button("⬇️ Download Batch ZIP", data=zip_buf.getvalue(),
                                file_name=f"Batch_QR_vCards_{datetime.now().strftime('%Y%m%d')}.zip", mime="application/zip")
 
-# --- WhatsApp, Email, Link, Location ---
-# (keep same structure, just add PNG+SVG+ZIP options like above — I can extend fully if you want)
+# --- WhatsApp ---
+with tabs[2]:
+    st.header("📱 WhatsApp QR")
+    phone = st.text_input("Phone Number (with country code)")
+    msg = st.text_area("Message (optional)")
+    ec = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3, key="wa_ec")
+    box = st.slider("Box Size", 4, 20, 10, key="wa_box")
+    border = st.slider("Border", 2, 10, 4, key="wa_border")
+    fg = st.color_picker("Foreground", "#25D366", key="wa_fg")
+    bg = st.color_picker("Background", "#FFFFFF", key="wa_bg")
+    style = st.radio("QR Style", ["square", "dots"], index=0, key="wa_style")
+    if st.button("Generate WhatsApp QR"):
+        link = f"https://wa.me/{phone}?text={quote_plus(msg)}"
+        show_qr_result(link, f"whatsapp_{phone}", ec, box, border, fg, bg, style)
+
+# --- Email ---
+with tabs[3]:
+    st.header("📧 Email QR")
+    to = st.text_input("Recipient Email")
+    subject = st.text_input("Subject")
+    body = st.text_area("Body")
+    ec = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3, key="em_ec")
+    box = st.slider("Box Size", 4, 20, 10, key="em_box")
+    border = st.slider("Border", 2, 10, 4, key="em_border")
+    fg = st.color_picker("Foreground", "#0000FF", key="em_fg")
+    bg = st.color_picker("Background", "#FFFFFF", key="em_bg")
+    style = st.radio("QR Style", ["square", "dots"], index=0, key="em_style")
+    if st.button("Generate Email QR"):
+        mailto = f"mailto:{to}?subject={quote_plus(subject)}&body={quote_plus(body)}"
+        show_qr_result(mailto, f"email_{sanitize_filename(to)}", ec, box, border, fg, bg, style)
+
+# --- Link ---
+with tabs[4]:
+    st.header("🔗 URL QR")
+    url = st.text_input("Website URL")
+    ec = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3, key="ln_ec")
+    box = st.slider("Box Size", 4, 20, 10, key="ln_box")
+    border = st.slider("Border", 2, 10, 4, key="ln_border")
+    fg = st.color_picker("Foreground", "#000000", key="ln_fg")
+    bg = st.color_picker("Background", "#FFFFFF", key="ln_bg")
+    style = st.radio("QR Style", ["square", "dots"], index=0, key="ln_style")
+    if st.button("Generate Link QR"):
+        show_qr_result(url, "link_qr", ec, box, border, fg, bg, style)
+
+# --- Location ---
+with tabs[5]:
+    st.header("📍 Location QR")
+    lat = st.text_input("Latitude")
+    lon = st.text_input("Longitude")
+    ec = st.selectbox("Error Correction", list(EC_LEVELS.keys()), index=3, key="loc_ec")
+    box = st.slider("Box Size", 4, 20, 10, key="loc_box")
+    border = st.slider("Border", 2, 10, 4, key="loc_border")
+    fg = st.color_picker("Foreground", "#FF0000", key="loc_fg")
+    bg = st.color_picker("Background", "#FFFFFF", key="loc_bg")
+    style = st.radio("QR Style", ["square", "dots"], index=0, key="loc_style")
+    if st.button("Generate Location QR"):
+        if lat and lon:
+            maps_url = f"https://www.google.com/maps?q={lat},{lon}"
+            show_qr_result(maps_url, f"location_{lat}_{lon}", ec, box, border, fg, bg, style)
+        else:
+            st.warning("Please enter latitude and longitude.")
 
 # --- Barcode ---
 with tabs[6]:
