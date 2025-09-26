@@ -427,16 +427,17 @@ with tabs[6]:
     # Contact info
     st.markdown("---")
     st.markdown("**For more help, please contact:**")
-    st.write("Abdurrahman Alowain – Marketing Lead")
-    st.write("Email: abdurrahman@company.com")
-    st.write("Phone: +966500000000")
+    st.write("Abdurrahman Alowain – Product Designer & Developer")
+    st.write("Email: abdurrahmanowain@gmail.com")
+    st.write("LinkedIn: [linkedin.com/in/abdurrahman-alowain](https://www.linkedin.com/in/abdurrahman-alowain)")
 
     # Footer
     st.markdown(
         """
         <hr style="margin-top:30px; margin-bottom:10px;">
         <div style="text-align:center; color:gray; font-size:13px;">
-        © 2025 Alraedah Finance – Internal Tools. All rights reserved.
+        © 2025 Developed By Abdurrahman Alowain. All rights reserved. | Follow Me on 
+        <a href="https://www.x.com/a_owain" target="_blank">X (Twitter)</a>
         </div>
         """,
         unsafe_allow_html=True
