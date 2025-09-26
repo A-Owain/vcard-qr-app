@@ -1,5 +1,5 @@
 # ============================================================
-# QR, Barcodes & Employee Directory App (Minimal + Bilingual Instructions)
+# QR, Barcodes & Employee Directory App (Minimal + English UI, Bilingual Help in Last Tab)
 # ============================================================
 
 import streamlit as st
@@ -137,7 +137,7 @@ def export_batch_vcards(employees_df: pd.DataFrame, output_dir: str, custom_suff
         count += 1
 
     summary = (
-        "Batch vCards Export / تصدير مجموعة بطاقات vCard\n"
+        "Batch vCards Export\n"
         f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
         f"Folder: {folder_name}\n"
         f"Total Employees Processed: {count}\n"
@@ -167,7 +167,7 @@ def export_batch_plain_qr(qr_df: pd.DataFrame, output_dir: str, custom_suffix: s
         count += 1
 
     summary = (
-        "Batch Plain QR Export / تصدير مجموعة أكواد QR عادية\n"
+        "Batch Plain QR Export\n"
         f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
         f"Folder: {folder_name}\n"
         f"Total Items Processed: {count}\n"
@@ -211,26 +211,26 @@ tabs = st.tabs([
 # ------------------------------------------------------------
 with tabs[0]:
     st.markdown("### Single QR Code")
-    st.write("Enter text or URL to generate a QR code in PNG or SVG. / أدخل نص أو رابط لإنشاء كود QR بصيغة PNG أو SVG.")
+    st.write("Enter text or URL to generate a QR code in PNG or SVG.")
 
     qr_text = st.text_input("Text or URL", key="tab1_qr_text")
     if st.button("Generate QR", key="tab1_generate"):
         if qr_text.strip():
             png = qr_png_bytes(qr_text.strip())
             svg = qr_svg_bytes(qr_text.strip())
-            st.write("QR generated successfully. / تم إنشاء الكود بنجاح.")
+            st.write("QR generated successfully.")
             st.image(io.BytesIO(png), caption="QR Code")
             st.download_button("Download PNG", data=png, file_name="qr.png", mime="image/png", key="tab1_dl_png")
             st.download_button("Download SVG", data=svg, file_name="qr.svg", mime="image/svg+xml", key="tab1_dl_svg")
         else:
-            st.write("Please enter text or a URL. / الرجاء إدخال نص أو رابط.")
+            st.write("Please enter text or a URL.")
 
 # ------------------------------------------------------------
 # Tab 2: Single vCard
 # ------------------------------------------------------------
 with tabs[1]:
     st.markdown("### Single vCard")
-    st.write("Fill the fields to generate a vCard with QR. / املأ الحقول لإنشاء بطاقة vCard مع كود QR.")
+    st.write("Fill the fields to generate a vCard with QR.")
 
     first = st.text_input("First Name", key="tab2_first")
     last = st.text_input("Last Name", key="tab2_last")
@@ -249,7 +249,7 @@ with tabs[1]:
                "Phone": phone, "Email": email, "Website": website, "Location": location, "MapsLink": mapslink,
                "Notes": notes}
         vcard = create_vcard(emp)
-        st.write("vCard generated successfully. / تم إنشاء بطاقة vCard بنجاح.")
+        st.write("vCard generated successfully.")
         st.download_button("Download vCard (.vcf)", data=vcard, file_name=f"{first}_{last}.vcf", mime="text/vcard", key="tab2_dl_vcf")
         png = qr_png_bytes(vcard)
         svg = qr_svg_bytes(vcard)
@@ -262,7 +262,7 @@ with tabs[1]:
 # ------------------------------------------------------------
 with tabs[2]:
     st.markdown("### Batch QR Codes")
-    st.write("Upload an Excel file with Label and Data columns. / ارفع ملف إكسل يحتوي أعمدة Label و Data.")
+    st.write("Upload an Excel file with Label and Data columns.")
 
     uploaded_qr_excel = st.file_uploader("Upload Excel", type=["xlsx"], key="tab3_upload")
     custom_suffix_qr = st.text_input("Custom suffix", key="tab3_suffix")
@@ -272,18 +272,18 @@ with tabs[2]:
             qr_df = pd.read_excel(uploaded_qr_excel)
             batch_folder, summary = export_batch_plain_qr(qr_df, ".", custom_suffix=custom_suffix_qr)
             zip_buf = zip_directory(batch_folder)
-            st.write("Batch QR codes generated. / تم إنشاء مجموعة أكواد QR.")
-            st.text_area("Summary / الملخص", summary, height=180, key="tab3_summary")
+            st.write("Batch QR codes generated.")
+            st.text_area("Summary", summary, height=180, key="tab3_summary")
             st.download_button("Download ZIP", data=zip_buf, file_name=f"{os.path.basename(batch_folder)}.zip", mime="application/zip", key="tab3_dl_zip")
         else:
-            st.write("Please upload a valid Excel file. / الرجاء رفع ملف إكسل صحيح.")
+            st.write("Please upload a valid Excel file.")
 
 # ------------------------------------------------------------
 # Tab 4: Batch vCards
 # ------------------------------------------------------------
 with tabs[3]:
     st.markdown("### Batch vCards")
-    st.write("Upload an Excel file with employee data. Required: FirstName, LastName, Phone, Email. / ارفع ملف إكسل يحتوي بيانات الموظفين. الأعمدة المطلوبة: FirstName, LastName, Phone, Email.")
+    st.write("Upload an Excel file with employee data. Required: FirstName, LastName, Phone, Email.")
 
     uploaded_emp_excel = st.file_uploader("Upload Employee Excel", type=["xlsx"], key="tab4_upload")
     custom_suffix_vc = st.text_input("Custom suffix", key="tab4_suffix")
@@ -293,56 +293,81 @@ with tabs[3]:
             emp_df = pd.read_excel(uploaded_emp_excel)
             batch_folder, summary = export_batch_vcards(emp_df, ".", custom_suffix=custom_suffix_vc)
             zip_buf = zip_directory(batch_folder)
-            st.write("Batch vCards generated. / تم إنشاء مجموعة بطاقات vCard.")
-            st.text_area("Summary / الملخص", summary, height=180, key="tab4_summary")
+            st.write("Batch vCards generated.")
+            st.text_area("Summary", summary, height=180, key="tab4_summary")
             st.download_button("Download ZIP", data=zip_buf, file_name=f"{os.path.basename(batch_folder)}.zip", mime="application/zip", key="tab4_dl_zip")
         else:
-            st.write("Please upload a valid Employee Excel file. / الرجاء رفع ملف إكسل خاص بالموظفين.")
+            st.write("Please upload a valid Employee Excel file.")
 
 # ------------------------------------------------------------
 # Tab 5: Barcodes
 # ------------------------------------------------------------
 with tabs[4]:
     st.markdown("### Barcodes")
-    st.write("Enter data to generate a barcode. / أدخل بيانات لإنشاء باركود.")
+    st.write("Enter data to generate a barcode.")
 
     bc_type = st.selectbox("Barcode Type", ["Code128", "EAN13"], key="tab5_type")
     bc_data = st.text_input("Barcode Data", key="tab5_data")
     if st.button("Generate Barcode", key="tab5_generate"):
         if bc_data.strip():
             png = generate_barcode_png(bc_data.strip(), bc_type)
-            st.write("Barcode generated. / تم إنشاء الباركود.")
+            st.write("Barcode generated.")
             st.image(io.BytesIO(png), caption="Barcode")
             st.download_button("Download Barcode", data=png, file_name=f"{bc_type}_barcode.png", mime="image/png", key="tab5_dl")
         else:
-            st.write("Please enter data. / الرجاء إدخال البيانات.")
+            st.write("Please enter data.")
 
 # ------------------------------------------------------------
 # Tab 6: Employee Directory
 # ------------------------------------------------------------
 with tabs[5]:
     st.markdown("### Employee Directory")
-    st.write("Download the template to fill employee data. / حمّل القالب لملء بيانات الموظفين.")
+    st.write("Download the template to fill employee data.")
 
-    st.download_button("Download Employee Directory Template", data=generate_employee_template_xlsx(), file_name="Employee_Directory_Template.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="tab6_dl")
+    st.download_button("Download Employee Directory Template", data=generate_employee_template_xlsx(),
+                       file_name="Employee_Directory_Template.xlsx",
+                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                       key="tab6_dl")
 
 # ------------------------------------------------------------
 # Tab 7: Templates & Help
 # ------------------------------------------------------------
 with tabs[6]:
     st.markdown("### Templates & Help")
-    st.write("Employee Directory Template: / قالب دليل الموظفين:")
-    st.write("- Required: FirstName, LastName, Phone, Email / الأعمدة المطلوبة: FirstName, LastName, Phone, Email")
-    st.write("- Optional: Position, Department, Company, Website, Location, MapsLink, Notes / الأعمدة الاختيارية: Position, Department, Company, Website, Location, MapsLink, Notes")
-    st.write("- Includes one sample row. / يحتوي على صف تجريبي للتوضيح.")
 
-    st.write("Batch QR Template: / قالب الأكواد QR:")
-    st.write("- Required: Label, Data / الأعمدة المطلوبة: Label, Data")
-    st.write("- Includes one sample row. / يحتوي على صف تجريبي للتوضيح.")
+    st.markdown("#### English")
+    st.write("Employee Directory Template:")
+    st.write("- Required: FirstName, LastName, Phone, Email")
+    st.write("- Optional: Position, Department, Company, Website, Location, MapsLink, Notes")
+    st.write("- Includes one sample row for guidance.")
 
-    st.write("Notes: / ملاحظات:")
-    st.write("- All batch exports include a SUMMARY.txt file. / جميع المخرجات تحتوي ملف SUMMARY.txt")
-    st.write("- Website and MapsLink are added as separate URL lines in vCards. / موقع الشركة ورابط الخرائط يتم إضافتهم كسطرين URL في بطاقة vCard.")
+    st.write("Batch QR Template:")
+    st.write("- Required: Label, Data")
+    st.write("- Includes one sample row for guidance.")
 
-    st.download_button("Download Employee Directory Template", data=generate_employee_template_xlsx(), file_name="Employee_Directory_Template.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="tab7_dl1")
-    st.download_button("Download Batch QR Template", data=generate_batch_qr_template_xlsx(), file_name="Batch_QR_Template.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="tab7_dl2")
+    st.write("Notes:")
+    st.write("- All batch exports include a SUMMARY.txt file.")
+    st.write("- Website and MapsLink are added as separate URL lines in vCards.")
+
+    st.markdown("#### العربية")
+    st.write("قالب دليل الموظفين:")
+    st.write("- الأعمدة المطلوبة: FirstName, LastName, Phone, Email")
+    st.write("- الأعمدة الاختيارية: Position, Department, Company, Website, Location, MapsLink, Notes")
+    st.write("- يحتوي على صف تجريبي للتوضيح.")
+
+    st.write("قالب الأكواد (Batch QR):")
+    st.write("- الأعمدة المطلوبة: Label, Data")
+    st.write("- يحتوي على صف تجريبي للتوضيح.")
+
+    st.write("ملاحظات:")
+    st.write("- جميع المخرجات تحتوي ملف SUMMARY.txt")
+    st.write("- موقع الشركة (Website) ورابط الخرائط (MapsLink) يتم إضافتهم كسطرين URL في بطاقة vCard.")
+
+    st.download_button("Download Employee Directory Template", data=generate_employee_template_xlsx(),
+                       file_name="Employee_Directory_Template.xlsx",
+                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                       key="tab7_dl1")
+    st.download_button("Download Batch QR Template", data=generate_batch_qr_template_xlsx(),
+                       file_name="Batch_QR_Template.xlsx",
+                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                       key="tab7_dl2")
