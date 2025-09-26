@@ -1,171 +1,236 @@
 import streamlit as st
 import qrcode
 import pandas as pd
-import os
 import io
 import zipfile
+import os
 from PIL import Image
 import barcode
 from barcode.writer import ImageWriter
 
-# ======================
-# Helpers
-# ======================
+# --------------------------
+# Utility Functions
+# --------------------------
 
-def generate_qr(data, img_format="PNG"):
-    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+def generate_qr(data, box_size=10, border=4):
+    qr = qrcode.QRCode(
+        version=1,
+        box_size=box_size,
+        border=border
+    )
     qr.add_data(data)
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
-    buf = io.BytesIO()
-    img.save(buf, format=img_format)
-    buf.seek(0)
-    return buf
+    return img
 
-def generate_vcard(first_name, last_name, phone, email, company, title, department, location):
-    vcard = f"""BEGIN:VCARD
-VERSION:3.0
-N:{last_name};{first_name};;;
-FN:{first_name} {last_name}
-ORG:{company}
-TITLE:{title}
-TEL;TYPE=CELL:{phone}
-EMAIL:{email}
-item1.X-ABLABEL:Department
-item1.VALUE:{department}
-item2.X-ABLABEL:Location
-item2.VALUE:{location}
-END:VCARD
-"""
-    return vcard
+def download_button(file_bytes, file_name, file_label):
+    st.download_button(
+        label=file_label,
+        data=file_bytes,
+        file_name=file_name
+    )
 
-def generate_barcode(code_type, data):
-    barcode_class = barcode.get_barcode_class(code_type)
-    my_code = barcode_class(data, writer=ImageWriter())
-    buf = io.BytesIO()
-    my_code.write(buf)
-    buf.seek(0)
-    return buf
+# --------------------------
+# Streamlit Tabs
+# --------------------------
 
-def create_zip(files_dict):
-    zip_buf = io.BytesIO()
-    with zipfile.ZipFile(zip_buf, "w") as zf:
-        for filename, filecontent in files_dict.items():
-            zf.writestr(filename, filecontent.getvalue())
-    zip_buf.seek(0)
-    return zip_buf
+st.set_page_config(page_title="Business Tools Hub", layout="wide")
 
-# ======================
-# UI Tabs
-# ======================
+tabs = st.tabs([
+    "📇 vCard QR",
+    "📦 Product Barcode",
+    "👥 Employee Directory",
+    "📊 Business Card QR",
+    "🔗 URL / Link QR",
+    "📧 Email QR",
+    "📱 SMS / WhatsApp QR",
+    "💵 Payment QR"
+])
 
-st.set_page_config(page_title="QR & Barcode Tools", layout="centered")
-
-tabs = st.tabs(["📇 vCard QR Generator", "📦 Product Barcode", "👥 Employee Directory"])
-
-# ------------------
-# vCard QR Generator
-# ------------------
+# --------------------------
+# 1. vCard QR Generator
+# --------------------------
 with tabs[0]:
     st.header("📇 vCard QR Generator")
+    first = st.text_input("First Name")
+    last = st.text_input("Last Name")
+    phone = st.text_input("Phone")
+    email = st.text_input("Email")
+    org = st.text_input("Organization")
+    title = st.text_input("Job Title")
 
-    with st.form("vcard_form"):
-        first = st.text_input("First Name")
-        last = st.text_input("Last Name")
-        phone = st.text_input("Phone")
-        email = st.text_input("Email")
-        company = st.text_input("Company")
-        title = st.text_input("Job Title")
-        dept = st.text_input("Department")
-        loc = st.text_input("Location")
-        submitted = st.form_submit_button("Generate vCard QR")
+    if st.button("Generate vCard QR"):
+        vcard_data = f"""BEGIN:VCARD
+VERSION:3.0
+N:{last};{first};;;
+FN:{first} {last}
+ORG:{org}
+TITLE:{title}
+TEL:{phone}
+EMAIL:{email}
+END:VCARD"""
+        img = generate_qr(vcard_data)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        st.image(img, caption="vCard QR Code", use_container_width=False)
 
-    if submitted:
-        vcard_str = generate_vcard(first, last, phone, email, company, title, dept, loc)
+        # Downloads
+        download_button(buf.getvalue(), "vcard.png", "⬇️ Download PNG")
+        download_button(vcard_data.encode(), "vcard.vcf", "⬇️ Download VCF")
 
-        qr_png = generate_qr(vcard_str, "PNG")
-        qr_svg = generate_qr(vcard_str, "PNG")  # QRCode lib doesn’t natively output SVG cleanly
-        vcf_buf = io.BytesIO(vcard_str.encode("utf-8"))
-
-        st.image(qr_png, caption="vCard QR")
-
-        col1, col2, col3, col4 = st.columns(4)
-        col1.download_button("⬇️ PNG", qr_png, file_name=f"{first}_{last}.png")
-        col2.download_button("⬇️ SVG", qr_svg, file_name=f"{first}_{last}.svg")
-        col3.download_button("⬇️ vCard (.vcf)", vcf_buf, file_name=f"{first}_{last}.vcf")
-        all_zip = create_zip({
-            f"{first}_{last}.png": qr_png,
-            f"{first}_{last}.svg": qr_svg,
-            f"{first}_{last}.vcf": vcf_buf
-        })
-        col4.download_button("⬇️ ZIP", all_zip, file_name=f"{first}_{last}_bundle.zip")
-
-# ------------------
-# Product Barcode
-# ------------------
+# --------------------------
+# 2. Product Barcode
+# --------------------------
 with tabs[1]:
-    st.header("📦 Product Barcode")
-
-    barcode_type = st.selectbox("Barcode Type", ["code128", "ean13", "upc"])
-    barcode_data = st.text_input("Enter Product Code")
+    st.header("📦 Product Barcode Generator")
+    product_code = st.text_input("Enter Product Code")
+    barcode_type = st.selectbox("Select Barcode Type", ["code128", "ean13", "upc"])
 
     if st.button("Generate Barcode"):
         try:
-            barcode_img = generate_barcode(barcode_type, barcode_data)
-            st.image(barcode_img, caption=f"{barcode_type.upper()} Barcode")
+            BARCODE = barcode.get_barcode_class(barcode_type)
+            bar_img = BARCODE(product_code, writer=ImageWriter())
+            buf = io.BytesIO()
+            bar_img.write(buf)
+            buf.seek(0)
+            st.image(buf, caption="Generated Barcode")
 
-            col1, col2 = st.columns(2)
-            col1.download_button("⬇️ PNG", barcode_img, file_name=f"{barcode_type}_{barcode_data}.png")
-
-            # Fake SVG (convert PNG to SVG is not clean, but we offer same filename)
-            col2.download_button("⬇️ SVG", barcode_img, file_name=f"{barcode_type}_{barcode_data}.svg")
+            download_button(buf.getvalue(), f"barcode_{barcode_type}.png", "⬇️ Download PNG")
         except Exception as e:
             st.error(f"Error: {e}")
 
-# ------------------
-# Employee Directory
-# ------------------
+# --------------------------
+# 3. Employee Directory
+# --------------------------
 with tabs[2]:
-    st.header("👥 Employee Directory")
+    st.header("👥 Employee Directory Batch Generator")
 
-    st.write("📥 Download template, fill it, then upload to generate vCards + QR codes.")
-
-    # Template
+    st.write("📥 Download Excel template, fill it, then upload it back.")
     template = pd.DataFrame({
-        "First Name": [""],
-        "Last Name": [""],
-        "Phone": [""],
-        "Email": [""],
-        "Company": [""],
-        "Title": [""],
-        "Department": [""],
-        "Location": [""]
+        "First Name": [],
+        "Last Name": [],
+        "Phone": [],
+        "Email": [],
+        "Department": [],
+        "Location": []
     })
     template_buf = io.BytesIO()
     template.to_excel(template_buf, index=False)
-    template_buf.seek(0)
-    st.download_button("⬇️ Download Excel Template", template_buf, file_name="employee_template.xlsx")
+    download_button(template_buf.getvalue(), "employee_template.xlsx", "⬇️ Download Excel Template")
 
-    uploaded_file = st.file_uploader("Upload filled Excel", type=["xlsx"])
+    uploaded = st.file_uploader("Upload Completed Employee Excel", type=["xlsx"])
+    if uploaded:
+        df = pd.read_excel(uploaded)
+        zip_buf = io.BytesIO()
+        with zipfile.ZipFile(zip_buf, "w") as zipf:
+            for _, row in df.iterrows():
+                vcard_data = f"""BEGIN:VCARD
+VERSION:3.0
+N:{row['Last Name']};{row['First Name']};;;
+FN:{row['First Name']} {row['Last Name']}
+TEL:{row['Phone']}
+EMAIL:{row['Email']}
+ORG:{row['Department']}
+TITLE:{row['Location']}
+END:VCARD"""
+                img = generate_qr(vcard_data)
+                fname = f"{row['First Name']}_{row['Last Name']}.png"
+                buf = io.BytesIO()
+                img.save(buf, format="PNG")
+                zipf.writestr(fname, buf.getvalue())
+                zipf.writestr(f"{row['First Name']}_{row['Last Name']}.vcf", vcard_data)
+        zip_buf.seek(0)
+        download_button(zip_buf.getvalue(), "employees_qr.zip", "⬇️ Download ZIP with all files")
 
-    if uploaded_file:
-        df = pd.read_excel(uploaded_file)
-        all_files = {}
-        for _, row in df.iterrows():
-            first, last, phone, email, company, title, dept, loc = (
-                str(row["First Name"]), str(row["Last Name"]), str(row["Phone"]),
-                str(row["Email"]), str(row["Company"]), str(row["Title"]),
-                str(row["Department"]), str(row["Location"])
-            )
-            vcard_str = generate_vcard(first, last, phone, email, company, title, dept, loc)
-            qr_png = generate_qr(vcard_str, "PNG")
-            qr_svg = generate_qr(vcard_str, "PNG")
-            vcf_buf = io.BytesIO(vcard_str.encode("utf-8"))
+# --------------------------
+# 4. Business Card QR
+# --------------------------
+with tabs[3]:
+    st.header("📊 Business Card QR")
+    name = st.text_input("Full Name")
+    title = st.text_input("Title")
+    company = st.text_input("Company")
+    website = st.text_input("Website")
 
-            all_files[f"{first}_{last}.png"] = qr_png
-            all_files[f"{first}_{last}.svg"] = qr_svg
-            all_files[f"{first}_{last}.vcf"] = vcf_buf
+    if st.button("Generate Business Card QR"):
+        data = f"{name}\n{title}\n{company}\n{website}"
+        img = generate_qr(data)
+        st.image(img, caption="Business Card QR")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        download_button(buf.getvalue(), "business_card.png", "⬇️ Download PNG")
 
-        zip_buf = create_zip(all_files)
-        st.success("✅ Employee directory processed!")
-        st.download_button("⬇️ Download All as ZIP", zip_buf, file_name="employee_directory_bundle.zip")
+# --------------------------
+# 5. URL / Link QR
+# --------------------------
+with tabs[4]:
+    st.header("🔗 URL / Link QR")
+    url = st.text_input("Enter URL")
+    if st.button("Generate URL QR"):
+        img = generate_qr(url)
+        st.image(img)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        download_button(buf.getvalue(), "url_qr.png", "⬇️ Download PNG")
+
+# --------------------------
+# 6. Email QR
+# --------------------------
+with tabs[5]:
+    st.header("📧 Email QR")
+    recipient = st.text_input("Recipient Email")
+    subject = st.text_input("Subject")
+    body = st.text_area("Body")
+
+    if st.button("Generate Email QR"):
+        mailto = f"mailto:{recipient}?subject={subject}&body={body}"
+        img = generate_qr(mailto)
+        st.image(img)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        download_button(buf.getvalue(), "email_qr.png", "⬇️ Download PNG")
+
+# --------------------------
+# 7. SMS / WhatsApp QR
+# --------------------------
+with tabs[6]:
+    st.header("📱 SMS / WhatsApp QR")
+    phone = st.text_input("Phone Number (with country code)")
+    msg = st.text_area("Message")
+
+    option = st.radio("Choose", ["SMS", "WhatsApp"])
+    if st.button("Generate Messaging QR"):
+        if option == "SMS":
+            data = f"sms:{phone}?body={msg}"
+        else:
+            data = f"https://wa.me/{phone}?text={msg}"
+        img = generate_qr(data)
+        st.image(img)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        download_button(buf.getvalue(), "message_qr.png", "⬇️ Download PNG")
+
+# --------------------------
+# 8. Payment QR
+# --------------------------
+with tabs[7]:
+    st.header("💵 Payment QR")
+    method = st.selectbox("Payment Method", ["Bank Transfer", "PayPal", "Custom Link"])
+    data = ""
+    if method == "Bank Transfer":
+        iban = st.text_input("IBAN")
+        name = st.text_input("Account Holder")
+        data = f"Bank Transfer\nIBAN: {iban}\nName: {name}"
+    elif method == "PayPal":
+        paypal_email = st.text_input("PayPal Email")
+        data = f"https://paypal.me/{paypal_email}"
+    else:
+        link = st.text_input("Custom Payment Link")
+        data = link
+
+    if st.button("Generate Payment QR"):
+        img = generate_qr(data)
+        st.image(img)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        download_button(buf.getvalue(), "payment_qr.png", "⬇️ Download PNG")
