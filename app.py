@@ -4,7 +4,7 @@ import os
 import io
 import zipfile
 import qrcode
-import svgwrite
+import qrcode.image.svg
 from barcode import Code128, EAN13
 from barcode.writer import ImageWriter
 
@@ -103,17 +103,12 @@ def export_batch_qr(employees, output_dir, custom_folder=None):
         qr = qrcode.make(vcard_content)
         qr.save(os.path.join(emp_path, f"{folder_name}.png"))
 
-        # QR SVG
-        dwg = svgwrite.Drawing(
-            os.path.join(emp_path, f"{folder_name}.svg"),
-            profile="tiny"
-        )
-        qr_matrix = qrcode.make(vcard_content).get_matrix()
-        for y, row in enumerate(qr_matrix):
-            for x, cell in enumerate(row):
-                if cell:
-                    dwg.add(dwg.rect(insert=(x, y), size=(1, 1), fill="black"))
-        dwg.save()
+        # QR SVG (using built-in qrcode factory)
+        factory = qrcode.image.svg.SvgImage
+        svg_img = qrcode.make(vcard_content, image_factory=factory)
+        svg_path = os.path.join(emp_path, f"{folder_name}.svg")
+        with open(svg_path, "wb") as f:
+            svg_img.save(f)
 
         count += 1
 
