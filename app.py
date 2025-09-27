@@ -322,7 +322,7 @@ with tabs[4]:
 # ------------------------------------------------------------
 with tabs[5]:
     st.markdown("### Employee Directory")
-    st.write("Download the template, fill employee data, then upload it back for processing.")
+    st.write("Download the template, fill employee data, then upload it back to generate vCards + QR codes.")
 
     # Download template
     st.download_button("Download Employee Directory Template",
@@ -335,22 +335,28 @@ with tabs[5]:
     uploaded_dir_excel = st.file_uploader("Upload filled Employee Directory Excel", type=["xlsx"], key="tab6_upload")
 
     # Custom naming input
-    custom_name = st.text_input("Custom name for this directory (optional)", key="tab6_name")
+    custom_name = st.text_input("Custom suffix for output folder (optional)", key="tab6_name")
 
-    if uploaded_dir_excel:
-        df = pd.read_excel(uploaded_dir_excel)
-        st.write("Preview of uploaded data:")
-        st.dataframe(df.head())
+    if st.button("Generate Employee Directory Package", key="tab6_generate"):
+        if uploaded_dir_excel:
+            df = pd.read_excel(uploaded_dir_excel)
+            st.write("Preview of uploaded data:")
+            st.dataframe(df.head())
 
-        # Example: Save processed directory as CSV with custom name
-        filename = f"Employee_Directory_{custom_name or 'Export'}.csv"
-        csv_bytes = df.to_csv(index=False).encode("utf-8")
+            # Reuse the batch exporter
+            batch_folder, summary = export_batch_vcards(df, ".", custom_suffix=custom_name)
+            zip_buf = zip_directory(batch_folder)
 
-        st.download_button("Download Processed Directory",
-                           data=csv_bytes,
-                           file_name=filename,
-                           mime="text/csv",
-                           key="tab6_processed")
+            st.write("Employee directory package generated successfully.")
+            st.text_area("Summary", summary, height=180, key="tab6_summary")
+            st.download_button("Download Employee Directory Package (ZIP)",
+                               data=zip_buf,
+                               file_name=f"{os.path.basename(batch_folder)}.zip",
+                               mime="application/zip",
+                               key="tab6_dl_zip")
+        else:
+            st.write("Please upload a valid Employee Excel file.")
+
 
 # ------------------------------------------------------------
 # Tab 7: Templates & Help
