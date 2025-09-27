@@ -371,7 +371,7 @@ with tabs[6]:
                   <li>Optional: Position, Department, Company, Website, Location, MapsLink, Notes</li>
                   <li>Includes one sample row for guidance.</li>
                 </ul>
-                <p><b>Batch QR Template:</b></p>
+                <h4><b>Batch QR Template:</b></h4>
                 <ul>
                   <li>Required: Label, Data</li>
                   <li>Includes one sample row for guidance.</li>
