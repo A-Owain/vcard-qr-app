@@ -286,16 +286,37 @@ with tabs[3]:
     st.write("Upload an Excel file with employee data. Required: FirstName, LastName, Phone, Email.")
 
     uploaded_emp_excel = st.file_uploader("Upload Employee Excel", type=["xlsx"], key="tab4_upload")
-    custom_suffix_vc = st.text_input("Custom suffix", key="tab4_suffix")
+    custom_suffix_vc = st.text_input("Custom name for output folder", key="tab4_suffix")
 
     if st.button("Generate Batch vCards", key="tab4_generate"):
         if uploaded_emp_excel:
             emp_df = pd.read_excel(uploaded_emp_excel)
-            batch_folder, summary = export_batch_vcards(emp_df, ".", custom_suffix=custom_suffix_vc)
-            zip_buf = zip_directory(batch_folder)
-            st.write("Batch vCards generated.")
+
+            # Build folder name: CustomName + Date
+            date_part = datetime.now().strftime("%Y%m%d")
+            base_name = custom_suffix_vc.strip() if custom_suffix_vc.strip() else "Batch_vCards"
+            folder_name = f"{base_name}_{date_part}"
+
+            # Generate using existing function
+            batch_folder, summary = export_batch_vcards(emp_df, ".", custom_suffix=None)
+
+            # Rename folder to our custom rule
+            final_folder = os.path.join(".", folder_name)
+            if os.path.exists(final_folder):
+                import shutil
+                shutil.rmtree(final_folder)
+            os.rename(batch_folder, final_folder)
+
+            # Zip it
+            zip_buf = zip_directory(final_folder)
+
+            st.write("Batch vCards generated successfully.")
             st.text_area("Summary", summary, height=180, key="tab4_summary")
-            st.download_button("Download ZIP", data=zip_buf, file_name=f"{os.path.basename(batch_folder)}.zip", mime="application/zip", key="tab4_dl_zip")
+            st.download_button("Download Batch vCards (ZIP)",
+                               data=zip_buf,
+                               file_name=f"{folder_name}.zip",
+                               mime="application/zip",
+                               key="tab4_dl_zip")
         else:
             st.write("Please upload a valid Employee Excel file.")
 
