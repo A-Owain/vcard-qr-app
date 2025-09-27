@@ -365,18 +365,18 @@ with tabs[6]:
         st.markdown(
             """
             <div style="border:1px solid #ccc; border-radius:8px; padding:15px; margin-bottom:10px;">
-                <h4>Employee Directory Template:</h4>
+                <h4>* Employee Directory Template:</h4>
                 <ul>
                   <li>Required: FirstName, LastName, Phone, Email</li>
                   <li>Optional: Position, Department, Company, Website, Location, MapsLink, Notes</li>
                   <li>Includes one sample row for guidance.</li>
                 </ul>
-                <h4><b>Batch QR Template:</b></h4>
+                <h4><b>* Batch QR Template:</b></h4>
                 <ul>
                   <li>Required: Label, Data</li>
                   <li>Includes one sample row for guidance.</li>
                 </ul>
-                <h4><b>Notes:</b></h4>
+                <h4><b>* Notes:</b></h4>
                 <ul>
                   <li>All batch exports include a SUMMARY.txt file.</li>
                   <li>Website and MapsLink are added as separate URL lines in vCards.</li>
@@ -391,18 +391,18 @@ with tabs[6]:
         st.markdown(
             """
             <div style="border:1px solid #ccc; border-radius:8px; padding:15px; margin-bottom:10px;" dir="rtl">
-                <h4>قالب دليل الموظفين:</h4>
+                <h4>* قالب دليل الموظفين:</h4>
                 <ul>
                   <li>الأعمدة المطلوبة: FirstName, LastName, Phone, Email</li>
                   <li>الأعمدة الاختيارية: Position, Department, Company, Website, Location, MapsLink, Notes</li>
                   <li>يحتوي على صف تجريبي للتوضيح.</li>
                 </ul>
-                <h4><b>قالب الأكواد (Batch QR):</b></h4>
+                <h4><b>* قالب الأكواد (Batch QR):</b></h4>
                 <ul>
                   <li>الأعمدة المطلوبة: Label, Data</li>
                   <li>يحتوي على صف تجريبي للتوضيح.</li>
                 </ul>
-                <h4><b>ملاحظات:</b></h4>
+                <h4><b>* ملاحظات:</b></h4>
                 <ul>
                   <li>جميع المخرجات تحتوي ملف SUMMARY.txt</li>
                   <li>موقع الشركة (Website) ورابط الخرائط (MapsLink) يتم إضافتهم كسطرين URL في بطاقة vCard.</li>
