@@ -365,8 +365,7 @@ with tabs[6]:
         st.markdown(
             """
             <div style="border:1px solid #ccc; border-radius:8px; padding:15px; margin-bottom:10px;">
-                <h4>English</h4>
-                <p><b>Employee Directory Template:</b></p>
+                <h4>Employee Directory Template:</h4>
                 <ul>
                   <li>Required: FirstName, LastName, Phone, Email</li>
                   <li>Optional: Position, Department, Company, Website, Location, MapsLink, Notes</li>
@@ -392,8 +391,7 @@ with tabs[6]:
         st.markdown(
             """
             <div style="border:1px solid #ccc; border-radius:8px; padding:15px; margin-bottom:10px;" dir="rtl">
-                <h4>العربية</h4>
-                <p><b>قالب دليل الموظفين:</b></p>
+                <h4>قالب دليل الموظفين:</h4>
                 <ul>
                   <li>الأعمدة المطلوبة: FirstName, LastName, Phone, Email</li>
                   <li>الأعمدة الاختيارية: Position, Department, Company, Website, Location, MapsLink, Notes</li>
