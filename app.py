@@ -427,7 +427,7 @@ with tabs[6]:
     """
     <div style="border:1px solid #ccc; border-radius:8px; padding:15px; margin-top:15px;">
         <p><b>For more help, please contact:</b></p>
-        <p>Abdurrahman Alowain —— Product Designer & Developer</p>
+        <p>Abdurrahman Alowain — Product Designer & Developer</p>
         <p>
           <a href="mailto:abdurrahmanowain@gmail.com" target="_blank">Email</a> | 
           <a href="https://www.linkedin.com/in/abdurrahnmanowain/" target="_blank">LinkedIn</a>
