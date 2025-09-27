@@ -439,14 +439,16 @@ with tabs[6]:
     unsafe_allow_html=True
 )
 
-    # Footer
-    st.markdown(
-        """
-        <hr style="margin-top:30px; margin-bottom:10px;">
-        <div style="text-align:center; color:gray; font-size:13px;">
-        © 2025 Developed By Abdurrahman Alowain. All rights reserved. | Follow Me on 
-        <a href="https://www.x.com/a_owain" target="_blank">X (Twitter)</a>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+# ============================================================
+# Footer (global for all tabs)
+# ============================================================
+st.markdown(
+    """
+    <hr style="margin-top:50px; margin-bottom:10px;">
+    <div style="text-align:center; color:gray; font-size:13px;">
+    © 2025 Developed By Abdurrahman Alowain. All rights reserved. | 
+    Follow me on <a href="https://www.x.com/a_owain" target="_blank">X (Twitter)</a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
