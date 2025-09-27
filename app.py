@@ -71,12 +71,12 @@ def generate_employee_template_xlsx() -> bytes:
     sample_row = [{
         "FirstName": "Abdurrahman",
         "LastName": "Alowain",
-        "Position": "Marketing Lead",
-        "Department": "Marketing",
+        "Position": "Product Designer",
+        "Department": "Design",
         "Phone": "+966500000000",
-        "Email": "abdurrahman@company.com",
-        "Company": "Alraedah Finance",
-        "Website": "https://alraedah.sa",
+        "Email": "abdurrahman@topsecret.com",
+        "Company": "Top Secret Co.",
+        "Website": "https://topsecret.com",
         "Location": "Riyadh HQ, Saudi Arabia",
         "MapsLink": "https://maps.app.goo.gl/example",
         "Notes": "Sample entry for testing"
