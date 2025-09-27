@@ -115,7 +115,7 @@ def zip_directory(folder_path: str) -> io.BytesIO:
 # ------------------------------------------------------------
 def export_batch_vcards(employees_df: pd.DataFrame, output_dir: str, custom_suffix: str | None = None):
     date_part = datetime.now().strftime("%Y%m%d")
-    folder_name = f"Batch_QR_vCards_{date_part}" + (f"_{custom_suffix}" if custom_suffix else "")
+    folder_name = f (f"_{custom_suffix}" if custom_suffix + "Batch_QR_vCards_{date_part}" else "")
     batch_path = os.path.join(output_dir, folder_name)
     os.makedirs(batch_path, exist_ok=True)
 
