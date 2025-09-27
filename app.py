@@ -115,7 +115,7 @@ def zip_directory(folder_path: str) -> io.BytesIO:
 # ------------------------------------------------------------
 def export_batch_vcards(employees_df: pd.DataFrame, output_dir: str, custom_suffix: str | None = None):
     date_part = datetime.now().strftime("%Y%m%d")
-    folder_name = f (f"_{custom_suffix}" if custom_suffix + "Batch_QR_vCards_{date_part}" else "")
+    folder_name = f"Batch_QR_vCards_{date_part}" + (f"_{custom_suffix}" if custom_suffix else "")
     batch_path = os.path.join(output_dir, folder_name)
     os.makedirs(batch_path, exist_ok=True)
 
@@ -335,7 +335,7 @@ with tabs[5]:
     uploaded_dir_excel = st.file_uploader("Upload filled Employee Directory Excel", type=["xlsx"], key="tab6_upload")
 
     # Custom naming input
-    custom_name = st.text_input("Custom suffix for output folder (optional)", key="tab6_name")
+    custom_name = st.text_input("Custom name for output folder", key="tab6_name")
 
     if st.button("Generate Employee Directory Package", key="tab6_generate"):
         if uploaded_dir_excel:
@@ -343,20 +343,32 @@ with tabs[5]:
             st.write("Preview of uploaded data:")
             st.dataframe(df.head())
 
-            # Reuse the batch exporter
-            batch_folder, summary = export_batch_vcards(df, ".", custom_suffix=custom_name)
-            zip_buf = zip_directory(batch_folder)
+            # Build folder name: CustomName + Date (YYYYMMDD)
+            date_part = datetime.now().strftime("%Y%m%d")
+            base_name = custom_name.strip() if custom_name.strip() else "EmployeeDirectory"
+            folder_name = f"{base_name}_{date_part}"
+
+            # Reuse the batch exporter, forcing the folder name
+            batch_folder, summary = export_batch_vcards(df, ".", custom_suffix=None)
+            # Rename the folder to match our custom rule
+            final_folder = os.path.join(".", folder_name)
+            if os.path.exists(final_folder):
+                import shutil
+                shutil.rmtree(final_folder)  # clean if exists
+            os.rename(batch_folder, final_folder)
+
+            # Zip it
+            zip_buf = zip_directory(final_folder)
 
             st.write("Employee directory package generated successfully.")
             st.text_area("Summary", summary, height=180, key="tab6_summary")
             st.download_button("Download Employee Directory Package (ZIP)",
                                data=zip_buf,
-                               file_name=f"{os.path.basename(batch_folder)}.zip",
+                               file_name=f"{folder_name}.zip",
                                mime="application/zip",
                                key="tab6_dl_zip")
         else:
             st.write("Please upload a valid Employee Excel file.")
-
 
 # ------------------------------------------------------------
 # Tab 7: Templates & Help
