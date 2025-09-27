@@ -376,7 +376,7 @@ with tabs[6]:
                   <li>Required: Label, Data</li>
                   <li>Includes one sample row for guidance.</li>
                 </ul>
-                <p><b>Notes:</b></p>
+                <h4><b>Notes:</b></h4>
                 <ul>
                   <li>All batch exports include a SUMMARY.txt file.</li>
                   <li>Website and MapsLink are added as separate URL lines in vCards.</li>
@@ -397,12 +397,12 @@ with tabs[6]:
                   <li>الأعمدة الاختيارية: Position, Department, Company, Website, Location, MapsLink, Notes</li>
                   <li>يحتوي على صف تجريبي للتوضيح.</li>
                 </ul>
-                <p><b>قالب الأكواد (Batch QR):</b></p>
+                <h4><b>قالب الأكواد (Batch QR):</b></h4>
                 <ul>
                   <li>الأعمدة المطلوبة: Label, Data</li>
                   <li>يحتوي على صف تجريبي للتوضيح.</li>
                 </ul>
-                <p><b>ملاحظات:</b></p>
+                <h4><b>ملاحظات:</b></h4>
                 <ul>
                   <li>جميع المخرجات تحتوي ملف SUMMARY.txt</li>
                   <li>موقع الشركة (Website) ورابط الخرائط (MapsLink) يتم إضافتهم كسطرين URL في بطاقة vCard.</li>
