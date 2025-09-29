@@ -256,17 +256,6 @@ with tabs[1]:
         st.image(io.BytesIO(png), caption="vCard QR Code")
         st.download_button("Download QR (PNG)", data=png, file_name=f"{first}_{last}.png", mime="image/png", key="tab2_dl_png")
         st.download_button("Download QR (SVG)", data=svg, file_name=f"{first}_{last}.svg", mime="image/svg+xml", key="tab2_dl_svg")
-        
-        # Zip it
-            zip_buf = zip_directory(final_folder)
-
-            st.write("Batch vCards generated successfully.")
-            st.text_area("Summary", summary, height=180, key="tab4_summary")
-            st.download_button("Download Batch vCards (ZIP)",
-                               data=zip_buf,
-                               file_name=f"{folder_name}.zip",
-                               mime="application/zip",
-                               key="tab4_dl_zip")
 
 # ------------------------------------------------------------
 # Tab 3: Batch QR Codes
