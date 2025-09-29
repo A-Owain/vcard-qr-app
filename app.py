@@ -150,7 +150,7 @@ def export_batch_vcards(employees_df: pd.DataFrame, output_dir: str, custom_suff
 
     summary = (
         "Batch vCards Export\n"
-        f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+        f"Date: {now_local_str().strftime('%Y-%m-%d %H:%M')}\n"
         f"Folder: {folder_name}\n"
         f"Total Employees Processed: {count}\n"
     )
@@ -159,7 +159,7 @@ def export_batch_vcards(employees_df: pd.DataFrame, output_dir: str, custom_suff
     return batch_path, summary
 
 def export_batch_plain_qr(qr_df: pd.DataFrame, output_dir: str, custom_suffix: str | None = None):
-    date_part = datetime.now().strftime("%Y%m%d")
+    date_part = now_local_str().strftime("%Y%m%d")
     folder_name = f"Batch_QR_Plain_{date_part}" + (f"_{custom_suffix}" if custom_suffix else "")
     batch_path = os.path.join(output_dir, folder_name)
     os.makedirs(batch_path, exist_ok=True)
@@ -180,7 +180,7 @@ def export_batch_plain_qr(qr_df: pd.DataFrame, output_dir: str, custom_suffix: s
 
     summary = (
         "Batch Plain QR Export\n"
-        f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+        f"Date: {now_local_str().strftime('%Y-%m-%d %H:%M')}\n"
         f"Folder: {folder_name}\n"
         f"Total Items Processed: {count}\n"
     )
@@ -322,7 +322,7 @@ with tabs[3]:
             emp_df = pd.read_excel(uploaded_emp_excel)
 
             # Build folder name: CustomName + Date
-            date_part = datetime.now().strftime("%Y%m%d")
+            date_part = now_local_str().strftime("%Y%m%d")
             base_name = custom_suffix_vc.strip() if custom_suffix_vc.strip() else "Batch_vCards"
             folder_name = f"{base_name}_{date_part}"
 
@@ -394,7 +394,7 @@ with tabs[5]:
             st.dataframe(df.head())
 
             # Build folder name: CustomName + Date (YYYYMMDD)
-            date_part = datetime.now().strftime("%Y%m%d")
+            date_part = now_local_str().strftime("%Y%m%d")
             base_name = custom_name.strip() if custom_name.strip() else "EmployeeDirectory"
             folder_name = f"{base_name}_{date_part}"
 
