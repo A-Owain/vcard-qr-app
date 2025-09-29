@@ -12,18 +12,6 @@ import qrcode.image.svg
 from barcode import Code128, EAN13
 from barcode.writer import ImageWriter
 from datetime import datetime
-from zoneinfo import ZoneInfo   # ✅ added for timezone
-
-# ------------------------------------------------------------
-# Timezone helpers
-# ------------------------------------------------------------
-LOCAL_TZ = ZoneInfo("Asia/Riyadh")
-
-def today_local_date() -> str:
-    return datetime.now(LOCAL_TZ).strftime("%Y%m%d")
-
-def now_local_str() -> str:
-    return datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M")
 
 # ------------------------------------------------------------
 # Helpers: QR encoders (PNG / SVG)
@@ -126,7 +114,7 @@ def zip_directory(folder_path: str) -> io.BytesIO:
 # Batch exporters
 # ------------------------------------------------------------
 def export_batch_vcards(employees_df: pd.DataFrame, output_dir: str, custom_suffix: str | None = None):
-    date_part = today_local_date()
+    date_part = datetime.now().strftime("%Y%m%d")
     folder_name = f"Batch_QR_vCards_{date_part}" + (f"_{custom_suffix}" if custom_suffix else "")
     batch_path = os.path.join(output_dir, folder_name)
     os.makedirs(batch_path, exist_ok=True)
@@ -150,7 +138,7 @@ def export_batch_vcards(employees_df: pd.DataFrame, output_dir: str, custom_suff
 
     summary = (
         "Batch vCards Export\n"
-        f"Date (Asia/Riyadh): {now_local_str()}\n"
+        f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
         f"Folder: {folder_name}\n"
         f"Total Employees Processed: {count}\n"
     )
@@ -159,7 +147,7 @@ def export_batch_vcards(employees_df: pd.DataFrame, output_dir: str, custom_suff
     return batch_path, summary
 
 def export_batch_plain_qr(qr_df: pd.DataFrame, output_dir: str, custom_suffix: str | None = None):
-    date_part = today_local_date()
+    date_part = datetime.now().strftime("%Y%m%d")
     folder_name = f"Batch_QR_Plain_{date_part}" + (f"_{custom_suffix}" if custom_suffix else "")
     batch_path = os.path.join(output_dir, folder_name)
     os.makedirs(batch_path, exist_ok=True)
@@ -180,7 +168,7 @@ def export_batch_plain_qr(qr_df: pd.DataFrame, output_dir: str, custom_suffix: s
 
     summary = (
         "Batch Plain QR Export\n"
-        f"Date (Asia/Riyadh): {now_local_str()}\n"
+        f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
         f"Folder: {folder_name}\n"
         f"Total Items Processed: {count}\n"
     )
@@ -269,17 +257,235 @@ with tabs[1]:
         st.download_button("Download QR (PNG)", data=png, file_name=f"{first}_{last}.png", mime="image/png", key="tab2_dl_png")
         st.download_button("Download QR (SVG)", data=svg, file_name=f"{first}_{last}.svg", mime="image/svg+xml", key="tab2_dl_svg")
 
-        # ✅ New: ZIP all files together
-        zip_buf = io.BytesIO()
-        with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr(f"{first}_{last}.vcf", vcard)
-            zf.writestr(f"{first}_{last}.png", png)
-            zf.writestr(f"{first}_{last}.svg", svg)
-        zip_buf.seek(0)
-        st.download_button(
-            "Download All (ZIP)",
-            data=zip_buf,
-            file_name=f"{first}_{last}_{today_local_date()}.zip",
-            mime="application/zip",
-            key="tab2_dl_zip"
+# ------------------------------------------------------------
+# Tab 3: Batch QR Codes
+# ------------------------------------------------------------
+with tabs[2]:
+    st.markdown("### Batch QR Codes")
+    st.write("Upload an Excel file with Label and Data columns.")
+
+    uploaded_qr_excel = st.file_uploader("Upload Excel", type=["xlsx"], key="tab3_upload")
+    custom_suffix_qr = st.text_input("Custom suffix", key="tab3_suffix")
+
+    if st.button("Generate Batch QR Codes", key="tab3_generate"):
+        if uploaded_qr_excel:
+            qr_df = pd.read_excel(uploaded_qr_excel)
+            batch_folder, summary = export_batch_plain_qr(qr_df, ".", custom_suffix=custom_suffix_qr)
+            zip_buf = zip_directory(batch_folder)
+            st.write("Batch QR codes generated.")
+            st.text_area("Summary", summary, height=180, key="tab3_summary")
+            st.download_button("Download ZIP", data=zip_buf, file_name=f"{os.path.basename(batch_folder)}.zip", mime="application/zip", key="tab3_dl_zip")
+        else:
+            st.write("Please upload a valid Excel file.")
+
+# ------------------------------------------------------------
+# Tab 4: Batch vCards
+# ------------------------------------------------------------
+with tabs[3]:
+    st.markdown("### Batch vCards")
+    st.write("Upload an Excel file with employee data. Required: FirstName, LastName, Phone, Email.")
+
+    uploaded_emp_excel = st.file_uploader("Upload Employee Excel", type=["xlsx"], key="tab4_upload")
+    custom_suffix_vc = st.text_input("Custom name for output folder", key="tab4_suffix")
+
+    if st.button("Generate Batch vCards", key="tab4_generate"):
+        if uploaded_emp_excel:
+            emp_df = pd.read_excel(uploaded_emp_excel)
+
+            # Build folder name: CustomName + Date
+            date_part = datetime.now().strftime("%Y%m%d")
+            base_name = custom_suffix_vc.strip() if custom_suffix_vc.strip() else "Batch_vCards"
+            folder_name = f"{base_name}_{date_part}"
+
+            # Generate using existing function
+            batch_folder, summary = export_batch_vcards(emp_df, ".", custom_suffix=None)
+
+            # Rename folder to our custom rule
+            final_folder = os.path.join(".", folder_name)
+            if os.path.exists(final_folder):
+                import shutil
+                shutil.rmtree(final_folder)
+            os.rename(batch_folder, final_folder)
+
+            # Zip it
+            zip_buf = zip_directory(final_folder)
+
+            st.write("Batch vCards generated successfully.")
+            st.text_area("Summary", summary, height=180, key="tab4_summary")
+            st.download_button("Download Batch vCards (ZIP)",
+                               data=zip_buf,
+                               file_name=f"{folder_name}.zip",
+                               mime="application/zip",
+                               key="tab4_dl_zip")
+        else:
+            st.write("Please upload a valid Employee Excel file.")
+
+# ------------------------------------------------------------
+# Tab 5: Barcodes
+# ------------------------------------------------------------
+with tabs[4]:
+    st.markdown("### Barcodes")
+    st.write("Enter data to generate a barcode.")
+
+    bc_type = st.selectbox("Barcode Type", ["Code128", "EAN13"], key="tab5_type")
+    bc_data = st.text_input("Barcode Data", key="tab5_data")
+    if st.button("Generate Barcode", key="tab5_generate"):
+        if bc_data.strip():
+            png = generate_barcode_png(bc_data.strip(), bc_type)
+            st.write("Barcode generated.")
+            st.image(io.BytesIO(png), caption="Barcode")
+            st.download_button("Download Barcode", data=png, file_name=f"{bc_type}_barcode.png", mime="image/png", key="tab5_dl")
+        else:
+            st.write("Please enter data.")
+
+# ------------------------------------------------------------
+# Tab 6: Employee Directory
+# ------------------------------------------------------------
+with tabs[5]:
+    st.markdown("### Employee Directory")
+    st.write("Download the template, fill employee data, then upload it back to generate vCards + QR codes.")
+
+    # Download template
+    st.download_button("Download Employee Directory Template",
+                       data=generate_employee_template_xlsx(),
+                       file_name="Employee_Directory_Template.xlsx",
+                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                       key="tab6_dl")
+
+    # Upload filled file
+    uploaded_dir_excel = st.file_uploader("Upload filled Employee Directory Excel", type=["xlsx"], key="tab6_upload")
+
+    # Custom naming input
+    custom_name = st.text_input("Custom name for output folder", key="tab6_name")
+
+    if st.button("Generate Employee Directory Package", key="tab6_generate"):
+        if uploaded_dir_excel:
+            df = pd.read_excel(uploaded_dir_excel)
+            st.write("Preview of uploaded data:")
+            st.dataframe(df.head())
+
+            # Build folder name: CustomName + Date (YYYYMMDD)
+            date_part = datetime.now().strftime("%Y%m%d")
+            base_name = custom_name.strip() if custom_name.strip() else "EmployeeDirectory"
+            folder_name = f"{base_name}_{date_part}"
+
+            # Reuse the batch exporter, forcing the folder name
+            batch_folder, summary = export_batch_vcards(df, ".", custom_suffix=None)
+            # Rename the folder to match our custom rule
+            final_folder = os.path.join(".", folder_name)
+            if os.path.exists(final_folder):
+                import shutil
+                shutil.rmtree(final_folder)  # clean if exists
+            os.rename(batch_folder, final_folder)
+
+            # Zip it
+            zip_buf = zip_directory(final_folder)
+
+            st.write("Employee directory package generated successfully.")
+            st.text_area("Summary", summary, height=180, key="tab6_summary")
+            st.download_button("Download Employee Directory Package (ZIP)",
+                               data=zip_buf,
+                               file_name=f"{folder_name}.zip",
+                               mime="application/zip",
+                               key="tab6_dl_zip")
+        else:
+            st.write("Please upload a valid Employee Excel file.")
+
+# ------------------------------------------------------------
+# Tab 7: Templates & Help
+# ------------------------------------------------------------
+with tabs[6]:
+    st.markdown("### Templates & Help")
+
+    col1, col2 = st.columns(2)
+
+    # English section (left, bordered box)
+    with col1:
+        st.markdown(
+            """
+            <div style="border:1px solid #ccc; border-radius:8px; padding:15px; margin-bottom:10px;">
+                <h4>Employee Directory Template:</h4>
+                <ul>
+                  <li>Required: FirstName, LastName, Phone, Email</li>
+                  <li>Optional: Position, Department, Company, Website, Location, MapsLink, Notes</li>
+                  <li>Includes one sample row for guidance.</li>
+                </ul>
+                <h4><b>Batch QR Template:</b></h4>
+                <ul>
+                  <li>Required: Label, Data</li>
+                  <li>Includes one sample row for guidance.</li>
+                </ul>
+                <h4><b>Notes:</b></h4>
+                <ul>
+                  <li>All batch exports include a SUMMARY.txt file.</li>
+                  <li>Website and MapsLink are added as separate URL lines in vCards.</li>
+                </ul>
+            </div>
+            """,
+            unsafe_allow_html=True
         )
+
+    # Arabic section (right, bordered box with RTL)
+    with col2:
+        st.markdown(
+            """
+            <div style="border:1px solid #ccc; border-radius:8px; padding:15px; margin-bottom:10px;" dir="rtl">
+                <h4>قالب دليل الموظفين:</h4>
+                <ul>
+                  <li>الأعمدة المطلوبة: FirstName, LastName, Phone, Email</li>
+                  <li>الأعمدة الاختيارية: Position, Department, Company, Website, Location, MapsLink, Notes</li>
+                  <li>يحتوي على صف تجريبي للتوضيح.</li>
+                </ul>
+                <h4><b>قالب الأكواد (Batch QR):</b></h4>
+                <ul>
+                  <li>الأعمدة المطلوبة: Label, Data</li>
+                  <li>يحتوي على صف تجريبي للتوضيح.</li>
+                </ul>
+                <h4><b>ملاحظات:</b></h4>
+                <ul>
+                  <li>جميع المخرجات تحتوي ملف SUMMARY.txt</li>
+                  <li>موقع الشركة (Website) ورابط الخرائط (MapsLink) يتم إضافتهم كسطرين URL في بطاقة vCard.</li>
+                </ul>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # Downloads
+    st.download_button("Download Employee Directory Template", data=generate_employee_template_xlsx(),
+                       file_name="Employee_Directory_Template.xlsx",
+                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                       key="tab7_dl1")
+    st.download_button("Download Batch QR Template", data=generate_batch_qr_template_xlsx(),
+                       file_name="Batch_QR_Template.xlsx",
+                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                       key="tab7_dl2")
+
+    # Contact info
+    st.markdown(
+    """
+    <div style="border:1px solid #ccc; border-radius:8px; padding:15px; margin-top:15px;">
+        <p><b>For more help, please contact:</b></p>
+        <p>Abdurrahman Alowain — Product Designer & Developer</p>
+        <p>
+          <a href="mailto:abdurrahmanowain@gmail.com" target="_blank">Email</a> | 
+          <a href="https://www.linkedin.com/in/abdurrahnmanowain/" target="_blank">LinkedIn</a>
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+# ============================================================
+# Footer (global for all tabs)
+# ============================================================
+st.markdown(
+    """
+    <hr style="margin-top:50px; margin-bottom:10px;">
+    <div style="text-align:center; color:gray; font-size:13px;">
+    © 2025 Developed By Abdurrahman Alowain. All rights reserved. | 
+    Follow me on <a href="https://www.x.com/a_owain" target="_blank">X (Twitter)</a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
