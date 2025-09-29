@@ -12,6 +12,18 @@ import qrcode.image.svg
 from barcode import Code128, EAN13
 from barcode.writer import ImageWriter
 from datetime import datetime
+from zoneinfo import ZoneInfo   # add this import
+
+# ------------------------------------------------------------
+# Timezone helpers
+# ------------------------------------------------------------
+LOCAL_TZ = ZoneInfo("Asia/Riyadh")
+
+def today_local_date() -> str:
+    return datetime.now(LOCAL_TZ).strftime("%Y%m%d")
+
+def now_local_str() -> str:
+    return datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M")
 
 # ------------------------------------------------------------
 # Helpers: QR encoders (PNG / SVG)
@@ -114,7 +126,7 @@ def zip_directory(folder_path: str) -> io.BytesIO:
 # Batch exporters
 # ------------------------------------------------------------
 def export_batch_vcards(employees_df: pd.DataFrame, output_dir: str, custom_suffix: str | None = None):
-    date_part = datetime.now().strftime("%Y%m%d")
+    date_part = today_local_date().strftime("%Y%m%d")
     folder_name = f"Batch_QR_vCards_{date_part}" + (f"_{custom_suffix}" if custom_suffix else "")
     batch_path = os.path.join(output_dir, folder_name)
     os.makedirs(batch_path, exist_ok=True)
@@ -256,6 +268,23 @@ with tabs[1]:
         st.image(io.BytesIO(png), caption="vCard QR Code")
         st.download_button("Download QR (PNG)", data=png, file_name=f"{first}_{last}.png", mime="image/png", key="tab2_dl_png")
         st.download_button("Download QR (SVG)", data=svg, file_name=f"{first}_{last}.svg", mime="image/svg+xml", key="tab2_dl_svg")
+    
+# ZIP all files together
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(f"{first}_{last}.vcf", vcard)
+        zf.writestr(f"{first}_{last}.png", png)
+        zf.writestr(f"{first}_{last}.svg", svg)
+    zip_buf.seek(0)
+
+    st.download_button(
+    "Download All (ZIP)",
+    data=zip_buf,
+    file_name=f"{first}_{last}_{today_local_date()}.zip",
+    mime="application/zip",
+    key="tab2_dl_zip"
+)
+
 
 # ------------------------------------------------------------
 # Tab 3: Batch QR Codes
