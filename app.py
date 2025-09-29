@@ -256,6 +256,10 @@ with tabs[1]:
         st.image(io.BytesIO(png), caption="vCard QR Code")
         st.download_button("Download QR (PNG)", data=png, file_name=f"{first}_{last}.png", mime="image/png", key="tab2_dl_png")
         st.download_button("Download QR (SVG)", data=svg, file_name=f"{first}_{last}.svg", mime="image/svg+xml", key="tab2_dl_svg")
+        st.download_button("Download QRs (ZIP)",
+                               data=zip_buf,
+                               mime="application/zip",
+                               key="tab4_dl_zip")
 
 # ------------------------------------------------------------
 # Tab 3: Batch QR Codes
