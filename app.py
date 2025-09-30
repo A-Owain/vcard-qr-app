@@ -392,91 +392,6 @@ with tabs[5]:
             st.write("Please upload a valid Employee Excel file.")
 
 # ------------------------------------------------------------
-# Tab 7: Templates & Help
-# ------------------------------------------------------------
-with tabs[6]:
-    st.markdown("### Templates & Help")
-
-    col1, col2 = st.columns(2)
-
-    # English section (left, bordered box)
-    with col1:
-        st.markdown(
-            """
-            <div style="border:1px solid #ccc; border-radius:8px; padding:15px; margin-bottom:10px;">
-                <h4>Employee Directory Template:</h4>
-                <ul>
-                  <li>Required: FirstName, LastName, Phone, Email</li>
-                  <li>Optional: Position, Department, Company, Website, Location, MapsLink, Notes</li>
-                  <li>Includes one sample row for guidance.</li>
-                </ul>
-                <h4><b>Batch QR Template:</b></h4>
-                <ul>
-                  <li>Required: Label, Data</li>
-                  <li>Includes one sample row for guidance.</li>
-                </ul>
-                <h4><b>Notes:</b></h4>
-                <ul>
-                  <li>All batch exports include a SUMMARY.txt file.</li>
-                  <li>Website and MapsLink are added as separate URL lines in vCards.</li>
-                </ul>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    # Arabic section (right, bordered box with RTL)
-    with col2:
-        st.markdown(
-            """
-            <div style="border:1px solid #ccc; border-radius:8px; padding:15px; margin-bottom:10px;" dir="rtl">
-                <h4>قالب دليل الموظفين:</h4>
-                <ul>
-                  <li>الأعمدة المطلوبة: FirstName, LastName, Phone, Email</li>
-                  <li>الأعمدة الاختيارية: Position, Department, Company, Website, Location, MapsLink, Notes</li>
-                  <li>يحتوي على صف تجريبي للتوضيح.</li>
-                </ul>
-                <h4><b>قالب الأكواد (Batch QR):</b></h4>
-                <ul>
-                  <li>الأعمدة المطلوبة: Label, Data</li>
-                  <li>يحتوي على صف تجريبي للتوضيح.</li>
-                </ul>
-                <h4><b>ملاحظات:</b></h4>
-                <ul>
-                  <li>جميع المخرجات تحتوي ملف SUMMARY.txt</li>
-                  <li>موقع الشركة (Website) ورابط الخرائط (MapsLink) يتم إضافتهم كسطرين URL في بطاقة vCard.</li>
-                </ul>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    # Downloads
-    st.download_button("Download Employee Directory Template", data=generate_employee_template_xlsx(),
-                       file_name="Employee_Directory_Template.xlsx",
-                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                       key="tab7_dl1")
-    st.download_button("Download Batch QR Template", data=generate_batch_qr_template_xlsx(),
-                       file_name="Batch_QR_Template.xlsx",
-                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                       key="tab7_dl2")
-
-    # Contact info
-    st.markdown(
-    """
-    <div style="border:1px solid #ccc; border-radius:8px; padding:15px; margin-top:15px;">
-        <p><b>For more help, please contact:</b></p>
-        <p>Abdurrahman Alowain — Product Designer & Developer</p>
-        <p>
-          <a href="mailto:abdurrahmanowain@gmail.com" target="_blank">Email</a> | 
-          <a href="https://www.linkedin.com/in/abdurrahnmanowain/" target="_blank">LinkedIn</a>
-        </p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-# ------------------------------------------------------------
 # Unified Tab: All-in-One QR & Barcode Tools
 # ------------------------------------------------------------
 st.markdown("## All-in-One QR & Barcode Tools")
@@ -681,6 +596,91 @@ with col3:
             st.download_button("Download Barcode", png, f"{bc_type}_barcode.png", "image/png")
     card_end()
 
+
+# ------------------------------------------------------------
+# Tab 7: Templates & Help
+# ------------------------------------------------------------
+with tabs[6]:
+    st.markdown("### Templates & Help")
+
+    col1, col2 = st.columns(2)
+
+    # English section (left, bordered box)
+    with col1:
+        st.markdown(
+            """
+            <div style="border:1px solid #ccc; border-radius:8px; padding:15px; margin-bottom:10px;">
+                <h4>Employee Directory Template:</h4>
+                <ul>
+                  <li>Required: FirstName, LastName, Phone, Email</li>
+                  <li>Optional: Position, Department, Company, Website, Location, MapsLink, Notes</li>
+                  <li>Includes one sample row for guidance.</li>
+                </ul>
+                <h4><b>Batch QR Template:</b></h4>
+                <ul>
+                  <li>Required: Label, Data</li>
+                  <li>Includes one sample row for guidance.</li>
+                </ul>
+                <h4><b>Notes:</b></h4>
+                <ul>
+                  <li>All batch exports include a SUMMARY.txt file.</li>
+                  <li>Website and MapsLink are added as separate URL lines in vCards.</li>
+                </ul>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # Arabic section (right, bordered box with RTL)
+    with col2:
+        st.markdown(
+            """
+            <div style="border:1px solid #ccc; border-radius:8px; padding:15px; margin-bottom:10px;" dir="rtl">
+                <h4>قالب دليل الموظفين:</h4>
+                <ul>
+                  <li>الأعمدة المطلوبة: FirstName, LastName, Phone, Email</li>
+                  <li>الأعمدة الاختيارية: Position, Department, Company, Website, Location, MapsLink, Notes</li>
+                  <li>يحتوي على صف تجريبي للتوضيح.</li>
+                </ul>
+                <h4><b>قالب الأكواد (Batch QR):</b></h4>
+                <ul>
+                  <li>الأعمدة المطلوبة: Label, Data</li>
+                  <li>يحتوي على صف تجريبي للتوضيح.</li>
+                </ul>
+                <h4><b>ملاحظات:</b></h4>
+                <ul>
+                  <li>جميع المخرجات تحتوي ملف SUMMARY.txt</li>
+                  <li>موقع الشركة (Website) ورابط الخرائط (MapsLink) يتم إضافتهم كسطرين URL في بطاقة vCard.</li>
+                </ul>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # Downloads
+    st.download_button("Download Employee Directory Template", data=generate_employee_template_xlsx(),
+                       file_name="Employee_Directory_Template.xlsx",
+                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                       key="tab7_dl1")
+    st.download_button("Download Batch QR Template", data=generate_batch_qr_template_xlsx(),
+                       file_name="Batch_QR_Template.xlsx",
+                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                       key="tab7_dl2")
+
+    # Contact info
+    st.markdown(
+    """
+    <div style="border:1px solid #ccc; border-radius:8px; padding:15px; margin-top:15px;">
+        <p><b>For more help, please contact:</b></p>
+        <p>Abdurrahman Alowain — Product Designer & Developer</p>
+        <p>
+          <a href="mailto:abdurrahmanowain@gmail.com" target="_blank">Email</a> | 
+          <a href="https://www.linkedin.com/in/abdurrahnmanowain/" target="_blank">LinkedIn</a>
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # ============================================================
 # Footer (global for all tabs)
